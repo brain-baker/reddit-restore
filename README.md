@@ -17,12 +17,13 @@ Requires a userscript manager such as:
 - Greasemonkey
 
 ## Features
-
+ 
 - Restores deleted/removed post text
 - Restores deleted/removed comment text
 - Reveals archived usernames when available
 - Restores Reddit images, galleries, GIFs, videos, and source links when archived
 - Redgifs support with fallback links
+- Premium Red themed borders and backgrounds (#ff453a) for all restored content blocks
 - Old Reddit and new Reddit support
 - Local cache for faster rescans
 - Status indicator with restore/failure states
