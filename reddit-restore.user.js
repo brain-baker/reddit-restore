@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Reddit Restore
 // @namespace   reddit-restore
-// @version     1.4
+// @version     1.6
 // @description Restores deleted Reddit posts, comments, usernames, images, videos, and media using Arctic Shift with PullPush fallback.
 // @author      brainbaker
 // @license     MIT
@@ -32,7 +32,7 @@
         maxObserverPasses: 24,
         cacheTTL: 6 * 60 * 60 * 1e3
     };
-    const REMOVED_RE = /^\s*\[(?:deleted|removed)\]\s*$|deleted by user|removed by (?:moderator|reddit)|sorry, this post (?:was|has been) removed|content is no longer available|this comment (?:has been|was) removed|this comment (?:has been|was) deleted|this post (?:has been|was) removed|awaiting moderator approval/i;
+    const REMOVED_RE = /^\s*\[(?:deleted|removed)\]\s*$|deleted by user|removed by (?:moderator|reddit)|sorry, this post (?:was|has been) (?:removed|deleted)|content is no longer available|this comment (?:has been|was) (?:removed|deleted)|this post (?:has been|was) (?:removed|deleted)|awaiting moderator approval/i;
     const IMAGE_RE = /\.(?:png|jpe?g|gif|webp|avif)(?:[?#].*)?$/i;
     const VIDEO_RE = /\.(?:mp4|webm|mov)(?:[?#].*)?$/i;
     const state = {
@@ -71,7 +71,7 @@
         return (location.pathname.match(/\/comments\/([a-z0-9]+)(?:\/|$)/i) || [])[1] || null;
     }
     function unique(a) {
-        return [ ...new Set(a.filter(Boolean)) ];
+        return [...new Set(a.filter(Boolean))];
     }
     function log(...a) {
         console.debug("[RU Enhanced]", ...a);
@@ -138,12 +138,15 @@
         if (document.getElementById("ru-enhanced-style")) return;
         const st = document.createElement("style");
         st.id = "ru-enhanced-style";
-        st.textContent = `\n      #ru-enhanced-status{position:fixed!important;right:12px!important;bottom:12px!important;z-index:2147483647!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;border-radius:50%!important;border:3px solid #ff8700!important;background:#fff!important;color:#128a13!important;font:700 18px/26px Arial,sans-serif!important;box-shadow:0 2px 8px #0006!important;cursor:pointer!important;padding:0!important;margin:0!important;text-align:center!important;appearance:none!important;-webkit-appearance:none!important;box-sizing:border-box!important;overflow:hidden!important;display:flex!important;align-items:center!important;justify-content:center!important}\n      .ru-enhanced-selftext,.ru-enhanced-media,.ru-enhanced-comment-body{display:block!important;clear:both!important;width:auto!important;max-width:min(860px,100%)!important;border-left:4px solid #ff8700;margin:8px 0!important;padding:10px!important;background:rgba(255,135,0,.08);border-radius:8px;box-sizing:border-box;white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;line-height:1.45!important}
-      .ru-enhanced-comment-body .md,.ru-enhanced-comment-body p,.ru-enhanced-selftext .md,.ru-enhanced-selftext p{white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;display:block!important;width:auto!important;max-width:100%!important}
-      .ru-enhanced-comment-body img,.ru-enhanced-comment-body video{max-width:min(520px,100%)!important;height:auto!important;border-radius:8px;display:block!important;margin:6px 0!important}
+        st.textContent = `
+      #ru-enhanced-status{position:fixed!important;right:12px!important;bottom:12px!important;z-index:2147483647!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;border-radius:50%!important;border:3px solid #ff453a!important;background:#fff!important;color:#128a13!important;font:700 18px/26px Arial,sans-serif!important;box-shadow:0 2px 8px #0006!important;cursor:pointer!important;padding:0!important;margin:0!important;text-align:center!important;appearance:none!important;-webkit-appearance:none!important;box-sizing:border-box!important;overflow:hidden!important;display:flex!important;align-items:center!important;justify-content:center!important}
+      .ru-enhanced-selftext,.ru-enhanced-media,.ru-enhanced-comment-body{display:block!important;clear:both!important;width:auto!important;max-width:min(860px,100%)!important;border-left:4px solid #ff453a;margin:8px 0!important;padding:10px!important;background:rgba(255,69,58,.08);border-radius:8px;box-sizing:border-box;white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;line-height:1.45!important;font-size:14px!important;font-weight:normal!important;font-style:normal!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important;color:var(--color-neutral-content-strong,var(--color-text-primary,inherit))!important}
+      .ru-child-comment{margin-left:32px!important;padding-left:16px!important;border-left:2px solid var(--color-neutral-border-weak,var(--color-neutral-border,rgba(128,128,128,0.2)))!important;display:block!important}
+      .ru-enhanced-comment-body .md,.ru-enhanced-comment-body p,.ru-enhanced-selftext .md,.ru-enhanced-selftext p{white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;display:block!important;width:auto!important;max-width:100%!important;font-size:14px!important;font-weight:normal!important;line-height:1.45!important}
+      .ru-enhanced-comment-body img,.ru-enhanced-comment-body video,.ru-enhanced-media img,.ru-enhanced-media video{max-width:min(520px,100%)!important;max-height:500px!important;object-fit:contain!important;height:auto!important;border-radius:8px;display:block!important;margin:6px 0!important}
       .ru-enhanced-comment-body{position:relative!important}.ru-enhanced-comment-body a.ru-enhanced-author{color:#7dd3fc!important}
       .ru-enhanced-author{color:#24a0ed!important;text-decoration:none!important;font-weight:600}.ru-enhanced-author:hover{text-decoration:underline!important}
-      .ru-enhanced-meta{font:12px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;opacity:.75;margin-bottom:6px}.ru-enhanced-grid{display:flex!important;flex-wrap:wrap!important;gap:10px!important;align-items:flex-start!important;align-content:flex-start!important}.ru-enhanced-grid figure{display:inline-block!important;vertical-align:top!important;margin:0!important;padding:0!important;width:auto!important;max-width:min(260px,100%)!important}.ru-enhanced-grid img,.ru-enhanced-grid video{display:block!important;width:auto!important;max-width:min(260px,100%)!important;max-height:320px!important;height:auto!important;border-radius:8px;background:#000;object-fit:contain!important}.ru-enhanced-grid iframe{display:block!important;width:min(360px,100%)!important;height:300px!important;border:0!important;border-radius:8px!important;background:#000}.ru-enhanced-redgifs-fallback,.rr-redgifs-link{display:block!important;margin-top:5px!important;font:12px/1.3 system-ui!important;color:#7dd3fc!important}.rr-redgifs-video-wrap{margin-top:8px!important}.rr-redgifs-status{margin-top:8px!important}.rr-redgifs-thumb{position:relative!important;display:block!important;max-width:min(420px,100%)!important;background:#111!important;border-radius:8px!important;overflow:hidden!important}.rr-redgifs-thumb img{display:block!important;width:100%!important;height:auto!important}.rr-redgifs-play{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;background:rgba(0,0,0,.68)!important;color:#fff!important;border-radius:999px!important;width:54px!important;height:54px!important;text-align:center!important;font:700 24px/54px Arial!important}.ru-enhanced-redgifs-thumb{position:relative!important;display:block!important;max-width:min(360px,100%)!important;background:#111!important;border-radius:8px!important;overflow:hidden!important}.ru-enhanced-redgifs-thumb img{display:block!important;width:100%!important;max-width:100%!important;height:auto!important}.ru-enhanced-redgifs-play{position:absolute!important;left:50%!important;top:50%!important;transform:translate(-50%,-50%)!important;background:rgba(0,0,0,.65)!important;color:#fff!important;border-radius:999px!important;width:54px!important;height:54px!important;line-height:54px!important;text-align:center!important;font:700 24px/54px Arial!important}.rr-media-status,.ru-enhanced-redgifs-unavailable,.ru-enhanced-media-unavailable{padding:10px!important;border-radius:8px!important;background:#111!important;color:#ddd!important;font:12px/1.4 system-ui!important;max-width:360px!important;box-sizing:border-box!important}.ru-enhanced-media-unavailable a{color:#7dd3fc!important}.ru-enhanced-grid figcaption{font:12px/1.3 system-ui;word-break:break-word;opacity:.75;margin-top:4px!important}.ru-enhanced-links{font-size:12px;margin-top:6px;word-break:break-all}.ru-enhanced-selftext+.ru-enhanced-media,.ru-enhanced-media+.ru-enhanced-selftext{margin-top:6px!important}.ru-enhanced-media{min-width:0!important}`;
+      .ru-enhanced-selftext+.ru-enhanced-media,.ru-enhanced-media+.ru-enhanced-selftext{margin-top:6px!important}.ru-enhanced-media{min-width:0!important}`;
         document.head.appendChild(st);
     }
     function cacheKey(type, id) {
@@ -176,7 +179,7 @@
                 t: Date.now(),
                 v: value
             }));
-        } catch (_e) {}
+        } catch (_e) { }
     }
     function restoredCommentPresent(el, id) {
         return !!el.querySelector(`[data-ru-comment="${id}"]`);
@@ -227,7 +230,7 @@
         return null;
     }
     async function fetchPost(id) {
-        return getFirst([ `${CFG.arctic}/api/posts/ids?ids=${encodeURIComponent(id)}&md2html=true`, `${CFG.pullpush}/reddit/search/submission/?ids=${encodeURIComponent(id)}&size=1` ]);
+        return getFirst([`${CFG.arctic}/api/posts/ids?ids=${encodeURIComponent(id)}&md2html=true`, `${CFG.pullpush}/reddit/search/submission/?ids=${encodeURIComponent(id)}&size=1`]);
     }
     async function fetchCommentsByIds(ids) {
         const map = new Map;
@@ -242,8 +245,8 @@
             const found = new Set(got.map(c => normId(c.id || c.name)));
             const missing = chunk.filter(x => !found.has(x));
             if (missing.length) {
-                const maxUrlLen = 4000;
                 const baseUrl = `${CFG.pullpush}/reddit/search/comment/?ids=`;
+                const maxUrlLen = 2000;
                 let batch = [];
                 for (const mid of missing) {
                     const testUrl = baseUrl + encodeURIComponent([...batch, mid].join(",")) + `&size=${batch.length + 1}`;
@@ -270,6 +273,25 @@
         }
         return map;
     }
+    function extractIdsFromRedditJSON(node, ids = []) {
+        if (!node) return ids;
+        if (Array.isArray(node)) {
+            node.forEach(item => extractIdsFromRedditJSON(item, ids));
+        } else if (typeof node === 'object') {
+            if (node.kind === 't1' && node.data && node.data.id) {
+                ids.push(node.data.id);
+            }
+            if (node.data && node.data.replies) {
+                extractIdsFromRedditJSON(node.data.replies, ids);
+            }
+            if (node.data && node.data.children) {
+                node.data.children.forEach(cId => {
+                    if (cId) ids.push(cId);
+                });
+            }
+        }
+        return ids;
+    }
     async function fetchThreadComments(postId) {
         const cached = cacheRead("thread", postId);
         if (cached) return cached;
@@ -291,7 +313,31 @@
                 lastCreated = oldest;
                 pages++;
             } while (pages < maxPages);
-            log("thread comments fetched:", allComments.length, "comments in", pages, "pages for post", postId);
+            log("thread comments fetched from Arctic Shift:", allComments.length, "comments in", pages, "pages for post", postId);
+            try {
+                const redditJsonUrl = location.href.split('?')[0] + '.json?limit=500';
+                const redditJson = await xhrJSON(redditJsonUrl);
+                if (redditJson && Array.isArray(redditJson) && redditJson[1]) {
+                    const redditIds = extractIdsFromRedditJSON(redditJson[1]);
+                    const missingIds = redditIds.filter(id => {
+                        const nId = normId(id);
+                        return nId && !seen.has(nId);
+                    });
+                    if (missingIds.length > 0) {
+                        log("Found missing comment IDs from Reddit JSON:", missingIds.length);
+                        const extraCommentsMap = await fetchCommentsByIds(missingIds);
+                        extraCommentsMap.forEach(c => {
+                            const id = normId(c.id || c.name);
+                            if (id && !seen.has(id)) {
+                                seen.add(id);
+                                allComments.push(c);
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                log("Failed to fetch/parse official Reddit thread JSON:", e);
+            }
             cacheWrite("thread", postId, allComments);
             return allComments;
         } catch (e) {
@@ -391,684 +437,861 @@
         return slug ? `https://www.redgifs.com/ifr/${slug}` : "";
     }
     function redgifsWatchURL(slugOrUrl) {
-        const slug = redgifsSlug(slugOrUrl) || slugOrUrl;
-        return slug ? `https://www.redgifs.com/watch/${slug}` : "";
-    }
+    const slug = redgifsSlug(slugOrUrl) || slugOrUrl;
+    return slug ? `https://www.redgifs.com/watch/${slug}` : "";
+}
 
-    function postContentTarget(root) {
-        if (isOldReddit() && root.matches?.('.thing.link, .link')) {
-            const entry = root.querySelector(':scope > .entry') || root.querySelector('.entry') || root;
-            let expando = entry.querySelector(':scope > .expando') || root.querySelector(':scope > .expando');
-            if (!expando) {
-                expando = document.createElement('div');
-                expando.className = 'expando ru-enhanced-old-post-target';
-                const buttons = entry.querySelector(':scope > .flat-list.buttons, :scope > ul.buttons');
-                if (buttons) buttons.insertAdjacentElement('beforebegin', expando); else entry.appendChild(expando);
-            }
-            return expando;
+function postContentTarget(root) {
+    if (isOldReddit() && root.matches?.('.thing.link, .link')) {
+        const entry = root.querySelector(':scope > .entry') || root.querySelector('.entry') || root;
+        let expando = entry.querySelector(':scope > .expando') || root.querySelector(':scope > .expando');
+        if (!expando) {
+            expando = document.createElement('div');
+            expando.className = 'expando ru-enhanced-old-post-target';
+            const buttons = entry.querySelector(':scope > .flat-list.buttons, :scope > ul.buttons');
+            if (buttons) buttons.insertAdjacentElement('beforebegin', expando); else entry.appendChild(expando);
         }
-        return root.querySelector?.(".entry, .expando") || root;
+        return expando;
     }
+    return root.querySelector?.(".entry, .expando") || root;
+}
 
-    function oembedURL(p) {
-        const html = p?.secure_media?.oembed?.html || p?.media?.oembed?.html || "";
-        const m = unhtml(html).match(/<iframe[^>]+src=["']([^"']+)["']/i);
-        return m ? m[1] : "";
-    }
+function oembedURL(p) {
+    const html = p?.secure_media?.oembed?.html || p?.media?.oembed?.html || "";
+    const m = unhtml(html).match(/<iframe[^>]+src=["']([^"']+)["']/i);
+    return m ? m[1] : "";
+}
 
-    function mediaCandidates(p) {
-        const out = [];
-        const norm = url => unhtml(url || "").replace(/^http:\/\//i, "https://").replace(/[?#].*$/, "").toLowerCase();
-        const add = (url, label, type, original = "", poster = "") => {
-            url = unhtml(url || "");
-            original = unhtml(original || "");
-            poster = unhtml(poster || "");
-            if (!/^https?:\/\//i.test(url)) return;
-            const slug = redgifsSlug(url);
-            const key = slug ? `redgifs:${slug.toLowerCase()}` : `${type}:${norm(url)}`;
-            if (!out.some(x => x.key === key)) out.push({ url, label, type, original, poster, key });
-        };
-        const sourceURL = unhtml(p?.url || "");
-        const oe = p?.secure_media?.oembed || p?.media?.oembed || {};
-        const oeURL = oembedURL(p);
-        const rg = redgifsEmbedURL(sourceURL) || redgifsEmbedURL(oeURL);
-        if (rg) {
-            add(rg, "Redgifs", "redgifs", sourceURL || oeURL || rg, oe.thumbnail_url || "");
-            return out;
-        }
-        const hasRealMediaObject = !!(p?.secure_media?.reddit_video || p?.media?.reddit_video || p?.is_gallery || p?.gallery_data?.items?.length || Object.keys(p?.media_metadata || {}).length || oeURL);
-        if (isSelfOrPermalinkURL(p, sourceURL) && !hasRealMediaObject) return out;
-        const rv = p?.secure_media?.reddit_video || p?.media?.reddit_video;
-        if (rv) {
-            add(rv.fallback_url, "video", "video", "", rv.scrubber_media_url || "");
-            add(rv.hls_url, "hls stream", "link");
-            add(rv.dash_url, "dash stream", "link");
-        }
-        const md = p?.media_metadata || {};
-        const gallery = p?.gallery_data?.items || Object.keys(md).map(media_id => ({ media_id }));
-        gallery.forEach(it => {
-            const m = md[it.media_id] || {};
-            add(m.s?.u || m.s?.gif || m.p?.slice?.(-1)?.[0]?.u, it.caption || "gallery image", "image");
-        });
-        if (oeURL) add(oeURL, oe.provider_name || "embed", "embed", sourceURL || oeURL, oe.thumbnail_url || "");
-        if (!isSelfOrPermalinkURL(p, sourceURL)) add(sourceURL, p?.domain || "source", IMAGE_RE.test(sourceURL) ? "image" : VIDEO_RE.test(sourceURL) ? "video" : "link");
-        const videoLike = p?.is_video || VIDEO_RE.test(sourceURL) || /video|gif/i.test(p?.post_hint || "") || !!rv || !!oeURL;
-        if (videoLike && !out.some(x => ["image","video","embed","redgifs"].includes(x.type))) {
-            const preview = p?.preview?.images?.[0];
-            add(preview?.source?.url || preview?.resolutions?.slice?.(-1)?.[0]?.url, "video preview", "image");
-        }
+function mediaCandidates(p) {
+    const out = [];
+    const norm = url => unhtml(url || "").replace(/^http:\/\//i, "https://").replace(/[?#].*$/, "").toLowerCase();
+    const add = (url, label, type, original = "", poster = "") => {
+        url = unhtml(url || "");
+        original = unhtml(original || "");
+        poster = unhtml(poster || "");
+        if (!/^https?:\/\//i.test(url)) return;
+        const slug = redgifsSlug(url);
+        const key = slug ? `redgifs:${slug.toLowerCase()}` : `${type}:${norm(url)}`;
+        if (!out.some(x => x.key === key)) out.push({ url, label, type, original, poster, key });
+    };
+    const sourceURL = unhtml(p?.url || "");
+    const oe = p?.secure_media?.oembed || p?.media?.oembed || {};
+    const oeURL = oembedURL(p);
+    const rg = redgifsEmbedURL(sourceURL) || redgifsEmbedURL(oeURL);
+    if (rg) {
+        add(rg, "Redgifs", "redgifs", sourceURL || oeURL || rg, oe.thumbnail_url || "");
         return out;
     }
-    function mediaHTML(p) {
-        const c = mediaCandidates(p);
-        if (!c.length) return "";
-        const embeds = c.filter(x => x.type === "image" || x.type === "video" || x.type === "embed" || x.type === "redgifs" || IMAGE_RE.test(x.url) || VIDEO_RE.test(x.url)).slice(0, 12).map(x => {
-            const u = esc(x.url), cap = esc(x.label || x.url);
-            if (x.type === "redgifs") {
-                const slug = redgifsSlug(x.url);
-                const open = esc(x.original || redgifsWatchURL(slug) || x.url);
-                const poster = esc(x.poster || "");
-                const thumb = poster ? `<div class="rr-redgifs-thumb"><img src="${poster}" loading="lazy" referrerpolicy="no-referrer"><span class="rr-redgifs-play">▶</span></div>` : `<div class="rr-media-status">Loading Redgifs…</div>`;
-                return `<figure><div class="rr-redgifs-box" data-rr-redgifs-id="${esc(slug)}" data-rr-redgifs-url="${open}">${thumb}<a class="rr-redgifs-link" href="${open}" target="_blank" rel="noopener noreferrer">open Redgifs</a></div><figcaption>${cap}</figcaption></figure>`;
-            }
-            if (x.type === "embed") return `<figure><iframe src="${u}" allow="autoplay; fullscreen; encrypted-media" loading="lazy"></iframe><a class="rr-redgifs-link" href="${u}" target="_blank" rel="noopener noreferrer">open media</a><figcaption>${cap}</figcaption></figure>`;
-            if (x.type === "video" || VIDEO_RE.test(x.url)) return `<figure><video controls loop playsinline preload="metadata" ${x.poster ? `poster="${esc(x.poster)}"` : ""} src="${u}"></video><figcaption>${cap}</figcaption></figure>`;
-            return `<figure><a href="${u}" target="_blank" rel="noopener noreferrer"><img loading="lazy" referrerpolicy="no-referrer" src="${u}"></a><figcaption>${cap}</figcaption></figure>`;
-        }).join("");
-        const links = c.map(x => `<li><a href="${esc(x.original || x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.label || "url")}</a></li>`).join("");
-        return `<div class="ru-enhanced-media" data-ru-kind="media"><div class="ru-enhanced-meta">↺ restored deleted media/source</div>${embeds ? `<div class="ru-enhanced-grid">${embeds}</div>` : ""}<details class="ru-enhanced-links" open><summary>source links</summary><ul>${links}</ul></details></div>`;
+    const hasRealMediaObject = !!(p?.secure_media?.reddit_video || p?.media?.reddit_video || p?.is_gallery || p?.gallery_data?.items?.length || Object.keys(p?.media_metadata || {}).length || oeURL);
+    if (isSelfOrPermalinkURL(p, sourceURL) && !hasRealMediaObject) return out;
+    const rv = p?.secure_media?.reddit_video || p?.media?.reddit_video;
+    if (rv) {
+        add(rv.fallback_url, "video", "video", "", rv.scrubber_media_url || "");
+        add(rv.hls_url, "hls stream", "link");
+        add(rv.dash_url, "dash stream", "link");
     }
-    async function redgifsToken() {
-        if (state.redgifsToken) return state.redgifsToken;
-        const j = await xhrJSON('https://api.redgifs.com/v2/auth/temporary');
-        state.redgifsToken = j?.token || "";
-        return state.redgifsToken;
+    const md = p?.media_metadata || {};
+    const gallery = p?.gallery_data?.items || Object.keys(md).map(media_id => ({ media_id }));
+    gallery.forEach(it => {
+        const m = md[it.media_id] || {};
+        add(m.s?.u || m.s?.gif || m.p?.slice?.(-1)?.[0]?.u, it.caption || "gallery image", "image");
+    });
+    if (oeURL) add(oeURL, oe.provider_name || "embed", "embed", sourceURL || oeURL, oe.thumbnail_url || "");
+    if (!isSelfOrPermalinkURL(p, sourceURL)) add(sourceURL, p?.domain || "source", IMAGE_RE.test(sourceURL) ? "image" : VIDEO_RE.test(sourceURL) ? "video" : "link");
+    const videoLike = p?.is_video || VIDEO_RE.test(sourceURL) || /video|gif/i.test(p?.post_hint || "") || !!rv || !!oeURL;
+    if (videoLike && !out.some(x => ["image", "video", "embed", "redgifs"].includes(x.type))) {
+        const preview = p?.preview?.images?.[0];
+        add(preview?.source?.url || preview?.resolutions?.slice?.(-1)?.[0]?.url, "video preview", "image");
     }
-    function setRedgifsStatus(box, message, link) {
-        let st = box.querySelector('.rr-redgifs-status');
-        if (!st) {
-            st = document.createElement('div');
-            st.className = 'rr-media-status rr-redgifs-status';
-            box.appendChild(st);
+    return out;
+}
+function mediaHTML(p) {
+    const c = mediaCandidates(p);
+    if (!c.length) return "";
+    const embeds = c.filter(x => x.type === "image" || x.type === "video" || x.type === "embed" || x.type === "redgifs" || IMAGE_RE.test(x.url) || VIDEO_RE.test(x.url)).slice(0, 12).map(x => {
+        const u = esc(x.url), cap = esc(x.label || x.url);
+        if (x.type === "redgifs") {
+            const slug = redgifsSlug(x.url);
+            const open = esc(x.original || redgifsWatchURL(slug) || x.url);
+            const poster = esc(x.poster || "");
+            const thumb = poster ? `<div class="rr-redgifs-thumb"><img src="${poster}" loading="lazy" referrerpolicy="no-referrer"><span class="rr-redgifs-play">▶</span></div>` : `<div class="rr-media-status">Loading Redgifs…</div>`;
+            return `<figure><div class="rr-redgifs-box" data-rr-redgifs-id="${esc(slug)}" data-rr-redgifs-url="${open}">${thumb}<a class="rr-redgifs-link" href="${open}" target="_blank" rel="noopener noreferrer">open Redgifs</a></div><figcaption>${cap}</figcaption></figure>`;
         }
-        st.innerHTML = `${esc(message)}${link ? `<br><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">open Redgifs link</a>` : ""}`;
+        if (x.type === "embed") return `<figure><iframe src="${u}" allow="autoplay; fullscreen; encrypted-media" loading="lazy"></iframe><a class="rr-redgifs-link" href="${u}" target="_blank" rel="noopener noreferrer">open media</a><figcaption>${cap}</figcaption></figure>`;
+        if (x.type === "video" || VIDEO_RE.test(x.url)) return `<figure><video controls loop playsinline preload="metadata" ${x.poster ? `poster="${esc(x.poster)}"` : ""} src="${u}"></video><figcaption>${cap}</figcaption></figure>`;
+        return `<figure><a href="${u}" target="_blank" rel="noopener noreferrer"><img loading="lazy" referrerpolicy="no-referrer" src="${u}"></a><figcaption>${cap}</figcaption></figure>`;
+    }).join("");
+    const links = c.map(x => `<li><a href="${esc(x.original || x.url)}" target="_blank" rel="noopener noreferrer">${esc(x.label || "url")}</a></li>`).join("");
+    return `<div class="ru-enhanced-media" data-ru-kind="media" slot="text-body"><div class="ru-enhanced-meta">↺ restored deleted media/source</div>${embeds ? `<div class="ru-enhanced-grid">${embeds}</div>` : ""}<details class="ru-enhanced-links" open><summary>source links</summary><ul>${links}</ul></details></div>`;
+}
+async function redgifsToken() {
+    if (state.redgifsToken) return state.redgifsToken;
+    const j = await xhrJSON('https://api.redgifs.com/v2/auth/temporary');
+    state.redgifsToken = j?.token || "";
+    return state.redgifsToken;
+}
+function setRedgifsStatus(box, message, link) {
+    let st = box.querySelector('.rr-redgifs-status');
+    if (!st) {
+        st = document.createElement('div');
+        st.className = 'rr-media-status rr-redgifs-status';
+        box.appendChild(st);
     }
-    async function resolveRedgifsVideos(root = document) {
-        const all = [...root.querySelectorAll('[data-rr-redgifs-id]')];
-        const seen = new Set;
-        all.forEach(el => {
-            const id = (el.getAttribute('data-rr-redgifs-id') || '').toLowerCase();
-            if (!id) return;
-            if (seen.has(id)) el.closest('figure')?.remove(); else seen.add(id);
-        });
-        const boxes = [...root.querySelectorAll('[data-rr-redgifs-id]')].filter(el => !el.getAttribute('data-rr-redgifs-done'));
-        if (!boxes.length) return;
-        let token = "";
-        try { token = await redgifsToken(); } catch (_e) {}
-        for (const box of boxes) {
-            const id = box.getAttribute('data-rr-redgifs-id');
-            if (!id) continue;
-            box.setAttribute('data-rr-redgifs-done', '1');
-            const fallback = box.getAttribute('data-rr-redgifs-url') || redgifsWatchURL(id);
-            try {
-                const j = await new Promise((resolve, reject) => {
-                    const fn = typeof GM !== "undefined" && GM.xmlHttpRequest ? GM.xmlHttpRequest.bind(GM) : typeof GM_xmlhttpRequest !== "undefined" ? GM_xmlhttpRequest : null;
-                    const url = `https://api.redgifs.com/v2/gifs/${encodeURIComponent(id)}`;
-                    if (fn) fn({ method: 'GET', url, headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }, onload: r => { try { resolve(JSON.parse(r.responseText || '{}')); } catch (e) { reject(e); } }, onerror: reject, ontimeout: reject });
-                    else fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).then(resolve).catch(reject);
-                });
-                const urls = j?.gif?.urls || {};
-                const src = urls.hd || urls.sd;
-                const poster = urls.poster || urls.thumbnail || "";
-                const open = urls.html || fallback;
-                if (src) {
-                    box.querySelector('.rr-redgifs-status')?.remove();
-                    let wrap = box.querySelector('.rr-redgifs-video-wrap');
-                    if (!wrap) {
-                        wrap = document.createElement('div');
-                        wrap.className = 'rr-redgifs-video-wrap';
-                        box.appendChild(wrap);
-                    }
-                    wrap.innerHTML = `<video controls autoplay muted loop playsinline preload="metadata" ${poster ? `poster="${esc(poster)}"` : ''} src="${esc(src)}"></video>`;
-                    const link = box.querySelector('.rr-redgifs-link');
-                    if (link) link.href = open;
-                    attachMediaFailureHandlers(wrap);
-                } else {
-                    const gone = /GifDeleted|deleted|410/i.test(String(j?.error?.code || j?.error?.description || ""));
-                    setRedgifsStatus(box, gone ? 'Redgifs media is deleted at source.' : 'Could not load Redgifs video here.', fallback);
-                }
-            } catch (_e) {
-                setRedgifsStatus(box, 'Could not load Redgifs video here.', fallback);
-            }
-        }
-    }
-
-    function unavailableMediaBox(url, kind = "image") {
-        const msg = kind === "video" ? "Video/media is probably deleted or unavailable." : "Image/media is probably deleted or unavailable.";
-        return `<div class="rr-media-status">${msg}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">open media link</a>` : ""}</div>`;
-    }
-    function attachMediaFailureHandlers(root = document) {
-        root.querySelectorAll('.ru-enhanced-media img, .ru-enhanced-comment-body img').forEach(img => {
-            if (img.getAttribute('data-ru-fallback-bound')) return;
-            img.setAttribute('data-ru-fallback-bound', '1');
-            const fail = () => {
-                const url = img.closest('a')?.href || img.src || "";
-                const fig = img.closest('figure');
-                if (fig) fig.innerHTML = unavailableMediaBox(url, "image");
-                else img.replaceWith(document.createRange().createContextualFragment(unavailableMediaBox(url, "image")));
-            };
-            img.addEventListener('error', fail, { once: true });
-            if (img.complete && img.naturalWidth === 0) fail();
-            setTimeout(() => { if (img.isConnected && img.complete && img.naturalWidth === 0) fail(); }, 3500);
-        });
-        root.querySelectorAll('.ru-enhanced-media video, .ru-enhanced-comment-body video').forEach(video => {
-            if (video.getAttribute('data-ru-fallback-bound')) return;
-            video.setAttribute('data-ru-fallback-bound', '1');
-            const fail = () => {
-                const url = video.currentSrc || video.src || "";
-                const rgBox = video.closest('[data-rr-redgifs-id]');
-                if (rgBox) {
-                    video.closest('.rr-redgifs-video-wrap')?.remove();
-                    setRedgifsStatus(rgBox, 'Could not play Redgifs video here.', rgBox.getAttribute('data-rr-redgifs-url') || url);
-                    return;
-                }
-                const fig = video.closest('figure');
-                if (fig) fig.innerHTML = unavailableMediaBox(url, "video");
-                else video.replaceWith(document.createRange().createContextualFragment(unavailableMediaBox(url, "video")));
-            };
-            video.addEventListener('error', fail, { once: true });
-        });
-    }
-
-    function postNode() {
-        return document.querySelector('shreddit-post, .thing.link:not(.comment), .sitetable > .link, [data-testid="post-container"], article[aria-label], article') || null;
-    }
-    function postDeletedParts() {
-        const p = postNode();
-        if (!p) return {
-            any: false
-        };
-        const txt = (p.innerText || p.textContent || "").slice(0, 5e3);
-        const authorEls = [ ...p.querySelectorAll('a.author, span.author, .tagline .author, .tagline [href^="/user/"], .tagline [href^="/u/"], a[href^="/user/"], a[href^="/u/"], [slot="authorName"], shreddit-post-author') ];
-        const titleEls = [ ...p.querySelectorAll('a.title, h1, [slot="title"], [data-testid="post-title"]') ];
-        const bodyEls = [ ...p.querySelectorAll('.expando .usertext-body .md, .usertext-body .md, [slot="text-body"], [data-testid="post-content"], .md') ];
-        const author = authorEls.filter(e => !e.hasAttribute?.("data-ru-hidden-deleted-author")).some(e => isDeletedAuthor(e.textContent) || /\/user\/\[deleted\]/i.test(e.getAttribute("href") || "")) || /Posted by\s+u\/\[deleted\]/i.test(txt);
-        const title = titleEls.some(e => looksRemoved(e.textContent));
-        const body = bodyEls.some(e => looksRemoved(e.textContent)) || /\b(post|content)\b.{0,30}\bremoved\b/i.test(txt);
-        const oldRedditDeleted = p.classList?.contains("deleted") || p.querySelector('.entry .buttons .removed, .entry .tagline .deleted, .expando .error, .expando .md')?.textContent?.match(/removed|deleted/i);
-        const oldRedditMissingExpando = location.hostname === 'old.reddit.com' && p.matches?.('.thing.link') && (p.getAttribute('data-url') || '').includes('/removed_by_reddit/');
-        const urlRemoved = oldRedditDeleted || oldRedditMissingExpando || (p.getAttribute("data-url") || "").includes("/removed_by_reddit/") || (p.getAttribute("data-permalink") || "").includes("/removed_by_reddit/");
-        const mediaGone = urlRemoved || (body && !hasVisibleMedia(p));
-        return {
-            any: author || title || body || urlRemoved,
-            author: author,
-            title: title,
-            body: body || urlRemoved,
-            media: mediaGone
-        };
-    }
-    function profileHref(author) {
-        return `/user/${encodeURIComponent(author)}/`;
-    }
-    function makeAuthorClickable(el, author) {
-        const href = profileHref(author);
-        if (el.tagName === "A") {
-            if (!el.hasAttribute("data-ru-author-modified")) {
-                el.setAttribute("data-ru-orig-text", el.textContent || "[deleted]");
-                el.setAttribute("data-ru-orig-href", el.getAttribute("href") || "");
-            }
-            el.textContent = author;
-            el.setAttribute("href", href);
-            el.setAttribute("data-ru-author-modified", "true");
-            el.classList.add("ru-enhanced-author");
-            return;
-        }
-        const a = document.createElement("a");
-        a.href = href;
-        a.textContent = author;
-        a.className = "ru-enhanced-author";
-        a.setAttribute("data-ru-author-link", author);
-        el.insertAdjacentElement("beforebegin", a);
-        el.setAttribute("data-ru-hidden-deleted-author", "true");
-        el.style.display = "none";
-    }
-    function replaceAuthor(root, author) {
-        if (!author || isDeletedAuthor(author)) return 0;
-        let n = 0;
-        const authorSel = 'a.author, a[href^="/user/"], a[href^="/u/"], [slot="authorName"], shreddit-post-author, shreddit-comment-author';
-        const nodes = root.matches?.(COMMENT_ROOT_SEL) ? directQuery(root, authorSel) : [ ...root.querySelectorAll(authorSel) ];
-        nodes.forEach(el => {
-            if (el.closest?.("[data-ru-author-link]") || el.hasAttribute?.("data-ru-hidden-deleted-author") || el.previousElementSibling?.hasAttribute?.("data-ru-author-link")) return;
-            if (isDeletedAuthor(el.textContent) || /\/user\/\[deleted\]/i.test(el.getAttribute?.("href") || "")) {
-                makeAuthorClickable(el, author);
-                n++;
-            }
-        });
-        return n;
-    }
-    function compactText(x) {
-        return String(x || "").replace(/\s+/g, " ").trim().toLowerCase();
-    }
-    function replaceOldRedditPostAuthor(root, author) {
-        if (!author || isDeletedAuthor(author) || !isOldReddit()) return 0;
-        if (root.querySelector('[data-ru-old-author-replaced]')) return 0;
-        const entry = root.querySelector?.(':scope > .entry') || root.querySelector?.('.entry') || root;
-        const tagline = entry.querySelector?.(':scope > .tagline, :scope > p.tagline, .tagline');
-        if (!tagline || !/\[deleted\]/i.test(tagline.textContent || "")) return 0;
-        const walker = document.createTreeWalker(tagline, NodeFilter.SHOW_TEXT, null, false);
-        let node;
-        while ((node = walker.nextNode())) {
-            if (/\[deleted\]/i.test(node.nodeValue || "")) {
-                const parts = node.nodeValue.split(/\[deleted\]/i);
-                const frag = document.createDocumentFragment();
-                parts.forEach((part, i) => {
-                    if (i > 0) {
-                        const a = document.createElement('a');
-                        a.className = 'ru-enhanced-author';
-                        a.setAttribute('data-ru-author-link', author);
-                        a.href = profileHref(author);
-                        a.textContent = author;
-                        frag.appendChild(a);
-                    }
-                    if (part) frag.appendChild(document.createTextNode(part));
-                });
-                node.parentNode.replaceChild(frag, node);
-                root.setAttribute('data-ru-old-author-replaced', 'true');
-                return 1;
-            }
-        }
-        return 0;
-    }
-
-    function archivedBodyAlreadyVisible(root, p) {
-        const archived = compactText(p?.selftext || "");
-        if (!archived) return true;
-        const page = compactText(root.innerText || root.textContent || "");
-        return page.includes(archived.slice(0, Math.min(80, archived.length)));
-    }
-    function hasVisiblePostBody(root) {
-        const bodyNodes = [ ...root.querySelectorAll('.expando .usertext-body .md, .entry > .usertext .usertext-body .md, .entry > form.usertext .usertext-body .md, [slot="text-body"], [data-testid="post-content"], [id*="post-rtjson-content"]') ];
-        return bodyNodes.some(n => {
-            const t = compactText(n.innerText || n.textContent || "");
-            return t && !looksRemoved(t) && t.length > 12;
-        });
-    }
-    function hasVisibleMedia(root) {
-        if (isOldReddit()) return !!root.querySelector('.expando img[src*="redd.it"], .expando img[src*="redditmedia"], .expando video, .expando iframe, .expando object, .expando embed');
-        return !!root.querySelector('[slot="media"] img, [slot="media"] video, [data-testid*="media"] img, [data-testid*="media"] video, shreddit-player, gallery-carousel, video');
-    }
-    function archiveSaysPostRemoved(p) {
-        const m = p?._meta || {};
-        return !!(p?.removed_by_category || m.removal_type || m.was_deleted_later || m.was_initially_deleted || m.was_initially_removed);
-    }
-
-    function restorePost(p, parts) {
-        const root = postNode();
-        if (!root) return {
-            postText: 0,
-            postMedia: 0,
-            authors: 0
-        };
-        let postText = 0, postMedia = 0, authors = 0;
-        authors += replaceAuthor(root, p.author);
-        if (!authors) authors += replaceOldRedditPostAuthor(root, p.author);
-        if (p.title) {
-            const titles = [ ...root.querySelectorAll('a.title, h1, [slot="title"], [data-testid="post-title"]') ];
-            titles.forEach(t => {
-                if (looksRemoved(t.textContent)) {
-                    if (!t.hasAttribute("data-ru-title-modified")) t.setAttribute("data-ru-orig-text", t.textContent || "[removed]");
-                    t.textContent = p.title;
-                    t.setAttribute("data-ru-title-modified", "true");
-                    postText++;
-                }
+    st.innerHTML = `${esc(message)}${link ? `<br><a href="${esc(link)}" target="_blank" rel="noopener noreferrer">open Redgifs link</a>` : ""}`;
+}
+async function resolveRedgifsVideos(root = document) {
+    const all = [...root.querySelectorAll('[data-rr-redgifs-id]')];
+    const seen = new Set;
+    all.forEach(el => {
+        const id = (el.getAttribute('data-rr-redgifs-id') || '').toLowerCase();
+        if (!id) return;
+        if (seen.has(id)) el.closest('figure')?.remove(); else seen.add(id);
+    });
+    const boxes = [...root.querySelectorAll('[data-rr-redgifs-id]')].filter(el => !el.getAttribute('data-rr-redgifs-done'));
+    if (!boxes.length) return;
+    let token = "";
+    try { token = await redgifsToken(); } catch (_e) { }
+    for (const box of boxes) {
+        const id = box.getAttribute('data-rr-redgifs-id');
+        if (!id) continue;
+        box.setAttribute('data-rr-redgifs-done', '1');
+        const fallback = box.getAttribute('data-rr-redgifs-url') || redgifsWatchURL(id);
+        try {
+            const j = await new Promise((resolve, reject) => {
+                const fn = typeof GM !== "undefined" && GM.xmlHttpRequest ? GM.xmlHttpRequest.bind(GM) : typeof GM_xmlhttpRequest !== "undefined" ? GM_xmlhttpRequest : null;
+                const url = `https://api.redgifs.com/v2/gifs/${encodeURIComponent(id)}`;
+                if (fn) fn({ method: 'GET', url, headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }, onload: r => { try { resolve(JSON.parse(r.responseText || '{}')); } catch (e) { reject(e); } }, onerror: reject, ontimeout: reject });
+                else fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).then(resolve).catch(reject);
             });
-        }
-        const body = htmlFrom(p, "selftext");
-        const mh = mediaHTML(p);
-        if (!mh) root.querySelectorAll('[data-ru-kind="media"]').forEach(n => n.remove());
-        const shouldRestoreBody = body && !root.querySelector('[data-ru-kind="selftext"]') && (parts.body || !hasVisiblePostBody(root)) && !archivedBodyAlreadyVisible(root, p);
-        if (shouldRestoreBody) {
-            const marker = [ ...root.querySelectorAll('.expando .usertext-body .md, .usertext-body .md, [slot="text-body"], [data-testid="post-content"], [id*="post-rtjson-content"], .md, p, div') ].find(e => looksRemoved(e.textContent));
-            const html = `<div class="ru-enhanced-selftext" data-ru-kind="selftext"><div class="ru-enhanced-meta">↺ restored deleted/missing post text</div>${body}</div>`;
-            const target = postContentTarget(root);
-            const existingMedia = target.querySelector('[data-ru-kind="media"]');
-            if (isOldReddit()) {
-                if (existingMedia) existingMedia.insertAdjacentHTML("beforebegin", html); else target.insertAdjacentHTML("afterbegin", html);
-            } else if (marker) marker.insertAdjacentHTML("afterend", html); else {
-                if (existingMedia) existingMedia.insertAdjacentHTML("beforebegin", html); else target.insertAdjacentHTML("afterbegin", html);
+            const urls = j?.gif?.urls || {};
+            const src = urls.hd || urls.sd;
+            const poster = urls.poster || urls.thumbnail || "";
+            const open = urls.html || fallback;
+            if (src) {
+                box.querySelector('.rr-redgifs-status')?.remove();
+                let wrap = box.querySelector('.rr-redgifs-video-wrap');
+                if (!wrap) {
+                    wrap = document.createElement('div');
+                    wrap.className = 'rr-redgifs-video-wrap';
+                    box.appendChild(wrap);
+                }
+                if (isOldReddit()) {
+                    wrap.innerHTML = `<video controls autoplay muted loop playsinline preload="metadata" ${poster ? `poster="${esc(poster)}"` : ''} src="${esc(src)}"></video>`;
+                } else {
+                    wrap.innerHTML = `<iframe src="https://www.redgifs.com/ifr/${esc(id)}?autoplay=0" frameborder="0" scrolling="no" allowfullscreen style="width:100%; height: 350px; border-radius: 8px; margin-top: 8px;"></iframe>`;
+                }
+                const link = box.querySelector('.rr-redgifs-link');
+                if (link) link.href = open;
+                attachMediaFailureHandlers(wrap);
+            } else {
+                const gone = /GifDeleted|deleted|410/i.test(String(j?.error?.code || j?.error?.description || ""));
+                setRedgifsStatus(box, gone ? 'Redgifs media is deleted at source.' : 'Could not load Redgifs video here.', fallback);
             }
-            postText++;
+        } catch (_e) {
+            setRedgifsStatus(box, 'Could not load Redgifs video here.', fallback);
         }
-        const shouldRestoreMedia = mh && !root.querySelector('[data-ru-kind="media"]') && !hasVisibleMedia(root) && (parts.media || archiveSaysPostRemoved(p));
-        if (shouldRestoreMedia) {
-            const target = postContentTarget(root);
-            target.insertAdjacentHTML("beforeend", mh);
-            resolveRedgifsVideos(target);
-            attachMediaFailureHandlers(target);
-            postMedia++;
-        }
-        return {
-            postText: postText,
-            postMedia: postMedia,
-            authors: authors
+    }
+}
+
+function unavailableMediaBox(url, kind = "image") {
+    const msg = kind === "video" ? "Video/media is probably deleted or unavailable." : "Image/media is probably deleted or unavailable.";
+    return `<div class="rr-media-status">${msg}${url ? `<br><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">open media link</a>` : ""}</div>`;
+}
+function attachMediaFailureHandlers(root = document) {
+    root.querySelectorAll('.ru-enhanced-media img, .ru-enhanced-comment-body img').forEach(img => {
+        if (img.getAttribute('data-ru-fallback-bound')) return;
+        img.setAttribute('data-ru-fallback-bound', '1');
+        const fail = () => {
+            const url = img.closest('a')?.href || img.src || "";
+            const fig = img.closest('figure');
+            if (fig) fig.innerHTML = unavailableMediaBox(url, "image");
+            else img.replaceWith(document.createRange().createContextualFragment(unavailableMediaBox(url, "image")));
         };
-    }
-    const COMMENT_ROOT_SEL = 'shreddit-comment, .comment[id], .comment[data-fullname], .thing.comment, [thingid*="t1_"], [data-testid="comment"]';
-    const COMMENT_BODY_SEL = '.usertext-body, .usertext-body .md, [slot="comment"], [id$="-comment-rtjson-content"], [data-testid="comment-content"], [data-testid="comment"] .md';
-    const COMMENT_AUTHOR_SEL = 'a.author, span.author, .tagline .author, a[href^="/user/"], a[href^="/u/"], [slot="authorName"], shreddit-comment-author';
-    function isOldReddit() {
-        return location.hostname === "old.reddit.com" || !!document.querySelector("body.listing-page, .commentarea .nestedlisting, .sitetable.nestedlisting");
-    }
-    function oldThingId(el) {
-        const node = el?.matches?.('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]') ? el : null;
-        const id = node?.id || '';
-        const m = id.match(/^thing_t1_([a-z0-9]{5,15})$/i);
-        return m ? m[1] : null;
-    }
-    function oldDomParentCommentId(el) {
-        const parent = el?.parentElement?.closest?.('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]');
-        return parent ? oldThingId(parent) : null;
-    }
-    function archiveMatchesOldCommentPosition(el, c, id) {
-        if (!isOldReddit()) return true;
-        const archiveId = normId(c?.id || c?.name || "");
-        if (archiveId && archiveId !== normId(id)) return false;
-        const domParent = oldDomParentCommentId(el);
-        if (!domParent) return true;
-        const archiveParent = normId(c?.parent_id || "");
-        return !archiveParent || archiveParent === normId(domParent);
+        img.addEventListener('error', fail, { once: true });
+        if (img.complete && img.naturalWidth === 0) fail();
+        setTimeout(() => { if (img.isConnected && img.complete && img.naturalWidth === 0) fail(); }, 3500);
+    });
+    root.querySelectorAll('.ru-enhanced-media video, .ru-enhanced-comment-body video').forEach(video => {
+        if (video.getAttribute('data-ru-fallback-bound')) return;
+        video.setAttribute('data-ru-fallback-bound', '1');
+        const fail = () => {
+            const url = video.currentSrc || video.src || "";
+            const rgBox = video.closest('[data-rr-redgifs-id]');
+            if (rgBox) {
+                video.closest('.rr-redgifs-video-wrap')?.remove();
+                setRedgifsStatus(rgBox, 'Could not play Redgifs video here.', rgBox.getAttribute('data-rr-redgifs-url') || url);
+                return;
+            }
+            const fig = video.closest('figure');
+            if (fig) fig.innerHTML = unavailableMediaBox(url, "video");
+            else video.replaceWith(document.createRange().createContextualFragment(unavailableMediaBox(url, "video")));
+        };
+        video.addEventListener('error', fail, { once: true });
+    });
+}
+
+function postNode() {
+    return document.querySelector('shreddit-post, .thing.link:not(.comment), .sitetable > .link, [data-testid="post-container"], article[aria-label], article') || null;
+}
+function postDeletedParts() {
+    const p = postNode();
+    if (!p) return {
+        any: false
+    };
+    const txt = (p.innerText || p.textContent || "").slice(0, 5e3);
+    const authorEls = [...p.querySelectorAll('a.author, span.author, .tagline .author, .tagline [href^="/user/"], .tagline [href^="/u/"], a[href^="/user/"], a[href^="/u/"], [slot="authorName"], shreddit-post-author')];
+    const titleEls = [...p.querySelectorAll('a.title, h1, [slot="title"], [data-testid="post-title"]')];
+    const bodyEls = [...p.querySelectorAll('.expando .usertext-body .md, .usertext-body .md, [slot="text-body"], [data-testid="post-content"], .md')];
+    let author = authorEls.filter(e => !e.hasAttribute?.("data-ru-hidden-deleted-author")).some(e => isDeletedAuthor(e.textContent) || /\/user\/\[deleted\]/i.test(e.getAttribute("href") || "")) || /Posted by\s+u\/\[deleted\]/i.test(txt);
+    if (!author && p?.tagName === 'SHREDDIT-POST' && isDeletedAuthor(p.getAttribute('author'))) author = true;
+
+    const title = titleEls.some(e => looksRemoved(e.textContent));
+
+    let isShredditRemoved = false;
+    if (p?.tagName === 'SHREDDIT-POST') {
+        const rb = p.getAttribute('removed-by');
+        if (rb && rb !== 'null' && rb !== 'false') isShredditRemoved = true;
     }
 
-    function oldEntryRoot(el) {
-        return el?.querySelector?.(':scope > .entry') || el?.querySelector?.('.entry') || el;
+    const body = bodyEls.some(e => looksRemoved(e.textContent)) || /\b(post|content)\b.{0,30}\b(?:removed|deleted)\b/i.test(txt) || isShredditRemoved;
+    const oldRedditDeleted = p.classList?.contains("deleted") || p.querySelector('.entry .buttons .removed, .entry .tagline .deleted, .expando .error, .expando .md')?.textContent?.match(/removed|deleted/i);
+    const oldRedditMissingExpando = location.hostname === 'old.reddit.com' && p.matches?.('.thing.link') && (p.getAttribute('data-url') || '').includes('/removed_by_reddit/');
+    const urlRemoved = oldRedditDeleted || oldRedditMissingExpando || (p.getAttribute("data-url") || "").includes("/removed_by_reddit/") || (p.getAttribute("data-permalink") || "").includes("/removed_by_reddit/");
+    const mediaGone = urlRemoved || (body && !hasVisibleMedia(p));
+    return {
+        any: author || title || body || urlRemoved,
+        author: author,
+        title: title,
+        body: body || urlRemoved,
+        media: mediaGone
+    };
+}
+function profileHref(author) {
+    return `/user/${encodeURIComponent(author)}/`;
+}
+function makeAuthorClickable(el, author) {
+    const href = profileHref(author);
+    if (el.tagName === "A") {
+        if (!el.hasAttribute("data-ru-author-modified")) {
+            el.setAttribute("data-ru-orig-text", el.textContent || "[deleted]");
+            el.setAttribute("data-ru-orig-href", el.getAttribute("href") || "");
+        }
+        el.textContent = author;
+        el.setAttribute("href", href);
+        el.setAttribute("data-ru-author-modified", "true");
+        el.classList.add("ru-enhanced-author");
+        return;
     }
-    function oldDirectBodies(el) {
-        return [...el.querySelectorAll('.usertext-body .md, .md')].filter(n => isSameCommentScope(el, n));
+    const a = document.createElement("a");
+    a.href = href;
+    a.textContent = author;
+    a.className = "ru-enhanced-author";
+    a.setAttribute("data-ru-author-link", author);
+    el.insertAdjacentElement("beforebegin", a);
+    el.setAttribute("data-ru-hidden-deleted-author", "true");
+    el.style.display = "none";
+}
+function replaceAuthor(root, author) {
+    if (!author || isDeletedAuthor(author)) return 0;
+    let n = 0;
+    const authorSel = 'a.author, a[href^="/user/"], a[href^="/u/"], [slot="authorName"], shreddit-post-author, shreddit-comment-author';
+    const nodes = root.matches?.(COMMENT_ROOT_SEL) ? directQuery(root, authorSel) : [...root.querySelectorAll(authorSel)];
+    nodes.forEach(el => {
+        if (el.closest?.("[data-ru-author-link]") || el.hasAttribute?.("data-ru-hidden-deleted-author") || el.previousElementSibling?.hasAttribute?.("data-ru-author-link")) return;
+        if (isDeletedAuthor(el.textContent) || /\/user\/\[deleted\]/i.test(el.getAttribute?.("href") || "")) {
+            makeAuthorClickable(el, author);
+            n++;
+        }
+    });
+    return n;
+}
+function compactText(x) {
+    return String(x || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+function replaceOldRedditPostAuthor(root, author) {
+    if (!author || isDeletedAuthor(author) || !isOldReddit()) return 0;
+    if (root.querySelector('[data-ru-old-author-replaced]')) return 0;
+    const entry = root.querySelector?.(':scope > .entry') || root.querySelector?.('.entry') || root;
+    const tagline = entry.querySelector?.(':scope > .tagline, :scope > p.tagline, .tagline');
+    if (!tagline || !/\[deleted\]/i.test(tagline.textContent || "")) return 0;
+    const walker = document.createTreeWalker(tagline, NodeFilter.SHOW_TEXT, null, false);
+    let node;
+    while ((node = walker.nextNode())) {
+        if (/\[deleted\]/i.test(node.nodeValue || "")) {
+            const parts = node.nodeValue.split(/\[deleted\]/i);
+            const frag = document.createDocumentFragment();
+            parts.forEach((part, i) => {
+                if (i > 0) {
+                    const a = document.createElement('a');
+                    a.className = 'ru-enhanced-author';
+                    a.setAttribute('data-ru-author-link', author);
+                    a.href = profileHref(author);
+                    a.textContent = author;
+                    frag.appendChild(a);
+                }
+                if (part) frag.appendChild(document.createTextNode(part));
+            });
+            node.parentNode.replaceChild(frag, node);
+            root.setAttribute('data-ru-old-author-replaced', 'true');
+            return 1;
+        }
     }
-    function oldDirectAuthors(el) {
-        return [...el.querySelectorAll('.tagline a.author, .tagline span.author, .author')].filter(n => isSameCommentScope(el, n));
-    }
+    return 0;
+}
 
-  function closestCommentRoot(node) {
-        if (!node?.closest && !node?.matches) return null;
-        return node.matches?.(COMMENT_ROOT_SEL) ? node : node.closest?.(COMMENT_ROOT_SEL);
-    }
-    function isSameCommentScope(root, node) {
-        const c = closestCommentRoot(node);
-        return c === root || !c && root.contains(node);
-    }
-    function directQuery(root, selector) {
-        if (isOldReddit() && root.matches?.('.thing.comment, .comment')) {
-            if (selector === COMMENT_BODY_SEL || selector.includes('usertext-body') || selector.includes('[slot="comment"]')) return oldDirectBodies(root);
-            if (selector === COMMENT_AUTHOR_SEL || selector.includes('a.author') || selector.includes('span.author')) return oldDirectAuthors(root);
-        }
-        return [ ...root.querySelectorAll(selector) ].filter(n => isSameCommentScope(root, n));
-    }
-    function commentOwnText(root) {
-        if (isOldReddit() && root.matches?.('.thing.comment, .comment')) {
-            const entry = oldEntryRoot(root);
-            const clone = entry.cloneNode(true);
-            clone.querySelectorAll("[data-ru-kind], [data-ru-comment], [data-ru-author-link]").forEach(n => n.remove());
-            return (clone.innerText || clone.textContent || "").slice(0, 2500);
-        }
-        const clone = root.cloneNode(true);
-        clone.querySelectorAll(COMMENT_ROOT_SEL).forEach(n => {
-            if (n !== clone) n.remove();
+function archivedBodyAlreadyVisible(root, p) {
+    const archived = compactText(p?.selftext || "");
+    if (!archived) return true;
+    const page = compactText(root.innerText || root.textContent || "");
+    return page.includes(archived.slice(0, Math.min(80, archived.length)));
+}
+function hasVisiblePostBody(root) {
+    const bodyNodes = [...root.querySelectorAll('.expando .usertext-body .md, .entry > .usertext .usertext-body .md, .entry > form.usertext .usertext-body .md, [slot="text-body"], [data-testid="post-content"], [id*="post-rtjson-content"]')];
+    return bodyNodes.some(n => {
+        const t = compactText(n.innerText || n.textContent || "");
+        return t && !looksRemoved(t) && t.length > 12;
+    });
+}
+function hasVisibleMedia(root) {
+    if (isOldReddit()) return !!root.querySelector('.expando img[src*="redd.it"], .expando img[src*="redditmedia"], .expando video, .expando iframe, .expando object, .expando embed');
+    return !!root.querySelector('[slot="media"] img, [slot="media"] video, [data-testid*="media"] img, [data-testid*="media"] video, shreddit-player, gallery-carousel, video');
+}
+function archiveSaysPostRemoved(p) {
+    const m = p?._meta || {};
+    return !!(p?.removed_by_category || m.removal_type || m.was_deleted_later || m.was_initially_deleted || m.was_initially_removed);
+}
+
+function restorePost(p, parts) {
+    const root = postNode();
+    if (!root) return {
+        postText: 0,
+        postMedia: 0,
+        authors: 0
+    };
+    let postText = 0, postMedia = 0, authors = 0;
+    authors += replaceAuthor(root, p.author);
+    if (!authors) authors += replaceOldRedditPostAuthor(root, p.author);
+    if (p.title) {
+        const titles = [...root.querySelectorAll('a.title, h1, [slot="title"], [data-testid="post-title"]')];
+        titles.forEach(t => {
+            if (looksRemoved(t.textContent)) {
+                if (!t.hasAttribute("data-ru-title-modified")) t.setAttribute("data-ru-orig-text", t.textContent || "[removed]");
+                t.textContent = p.title;
+                t.setAttribute("data-ru-title-modified", "true");
+                postText++;
+            }
         });
+    }
+    const body = htmlFrom(p, "selftext");
+    const mh = mediaHTML(p);
+    if (!mh) root.querySelectorAll('[data-ru-kind="media"]').forEach(n => n.remove());
+    const shouldRestoreBody = body && !root.querySelector('[data-ru-kind="selftext"]') && (parts.body || !hasVisiblePostBody(root)) && !archivedBodyAlreadyVisible(root, p);
+    if (shouldRestoreBody) {
+        const marker = [...root.querySelectorAll('.expando .usertext-body .md, .usertext-body .md, [slot="text-body"], [data-testid="post-content"], [id*="post-rtjson-content"], .md, p, div, shreddit-post-notice, faceplate-alert, [slot="post-notice"]')].find(e => looksRemoved(e.textContent));
+        let targetSlot = "text-body";
+        const titleSlotEl = !isOldReddit() && root.tagName === 'SHREDDIT-POST' ? root.querySelector('[slot="title"]') : null;
+        if (!isOldReddit() && marker && marker.hasAttribute("slot")) {
+            targetSlot = marker.getAttribute("slot");
+        }
+        const html = `<div class="ru-enhanced-selftext" data-ru-kind="selftext" ${!isOldReddit() && !titleSlotEl ? `slot="${targetSlot}"` : ""}><div class="ru-enhanced-meta">↺ restored deleted/missing post text</div>${body}</div>`;
+        const target = postContentTarget(root);
+        const existingMedia = root.querySelector('[data-ru-kind="media"]');
+
+        if (existingMedia) {
+            existingMedia.insertAdjacentHTML("beforebegin", html);
+        } else if (titleSlotEl) {
+            titleSlotEl.insertAdjacentHTML("beforeend", html);
+        } else if (!isOldReddit() && root.tagName === 'SHREDDIT-POST') {
+            target.insertAdjacentHTML("beforeend", html);
+        } else if (marker) {
+            marker.insertAdjacentHTML("afterend", html);
+        } else {
+            target.insertAdjacentHTML("afterbegin", html);
+        }
+        postText++;
+    }
+    const shouldRestoreMedia = mh && !root.querySelector('[data-ru-kind="media"]') && !hasVisibleMedia(root) && (parts.media || archiveSaysPostRemoved(p));
+    if (shouldRestoreMedia) {
+        const marker = [...root.querySelectorAll('.expando .usertext-body .md, .usertext-body .md, [slot="text-body"], [data-testid="post-content"], [id*="post-rtjson-content"], .md, p, div, shreddit-post-notice, faceplate-alert, [slot="post-notice"]')].find(e => looksRemoved(e.textContent));
+        let targetSlot = "text-body";
+        const titleSlotEl = !isOldReddit() && root.tagName === 'SHREDDIT-POST' ? root.querySelector('[slot="title"]') : null;
+        if (!isOldReddit() && marker && marker.hasAttribute("slot")) {
+            targetSlot = marker.getAttribute("slot");
+        }
+        const htmlWithSlot = mh.replace('slot="text-body"', !isOldReddit() && titleSlotEl ? "" : `slot="${targetSlot}"`);
+        const target = postContentTarget(root);
+        const restoredText = root.querySelector('[data-ru-kind="selftext"]');
+
+        if (restoredText) {
+            restoredText.insertAdjacentHTML("afterend", htmlWithSlot);
+        } else if (titleSlotEl) {
+            titleSlotEl.insertAdjacentHTML("beforeend", htmlWithSlot);
+        } else if (!isOldReddit() && root.tagName === 'SHREDDIT-POST') {
+            target.insertAdjacentHTML("beforeend", htmlWithSlot);
+        } else if (marker) {
+            marker.insertAdjacentHTML("afterend", htmlWithSlot);
+        } else {
+            target.insertAdjacentHTML("beforeend", htmlWithSlot);
+        }
+
+        resolveRedgifsVideos(target);
+        attachMediaFailureHandlers(target);
+        postMedia++;
+    }
+    return {
+        postText: postText,
+        postMedia: postMedia,
+        authors: authors
+    };
+}
+const COMMENT_ROOT_SEL = 'shreddit-comment, .comment[id], .comment[data-fullname], .thing.comment, [thingid*="t1_"], [data-testid="comment"], .ru-enhanced-injected-comment';
+const COMMENT_BODY_SEL = '.usertext-body, .usertext-body .md, [slot="comment"], [id$="-comment-rtjson-content"], [data-testid="comment-content"], [data-testid="comment"] .md';
+const COMMENT_AUTHOR_SEL = 'a.author, span.author, .tagline .author, a[href^="/user/"], a[href^="/u/"], [slot="authorName"], shreddit-comment-author';
+function isOldReddit() {
+    return location.hostname === "old.reddit.com" || !!document.querySelector("body.listing-page, .commentarea .nestedlisting, .sitetable.nestedlisting");
+}
+function oldThingId(el) {
+    const node = el?.matches?.('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]') ? el : null;
+    const id = node?.id || '';
+    const m = id.match(/^thing_t1_([a-z0-9]{5,15})$/i);
+    if (m) return m[1];
+    const classM = (el?.className || '').match(/id-t1_([a-z0-9]{5,15})/i);
+    return classM ? classM[1] : null;
+}
+function oldDomParentCommentId(el) {
+    const parent = el?.parentElement?.closest?.('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]');
+    return parent ? oldThingId(parent) : null;
+}
+function archiveMatchesOldCommentPosition(el, c, id) {
+    if (!isOldReddit()) return true;
+    const archiveId = normId(c?.id || c?.name || "");
+    if (archiveId && archiveId !== normId(id)) return false;
+    const domParent = oldDomParentCommentId(el);
+    if (!domParent) return true;
+    const archiveParent = normId(c?.parent_id || "");
+    return !archiveParent || archiveParent === normId(domParent);
+}
+
+function oldEntryRoot(el) {
+    return el?.querySelector?.(':scope > .entry') || el?.querySelector?.('.entry') || el;
+}
+function oldDirectBodies(el) {
+    return [...el.querySelectorAll('.usertext-body .md, .md')].filter(n => isSameCommentScope(el, n));
+}
+function oldDirectAuthors(el) {
+    return [...el.querySelectorAll('.tagline a.author, .tagline span.author, .author')].filter(n => isSameCommentScope(el, n));
+}
+
+function closestCommentRoot(node) {
+    if (!node?.closest && !node?.matches) return null;
+    return node.matches?.(COMMENT_ROOT_SEL) ? node : node.closest?.(COMMENT_ROOT_SEL);
+}
+function isSameCommentScope(root, node) {
+    const c = closestCommentRoot(node);
+    return c === root || !c && root.contains(node);
+}
+function directQuery(root, selector) {
+    if (isOldReddit() && root.matches?.('.thing.comment, .comment')) {
+        if (selector === COMMENT_BODY_SEL || selector.includes('usertext-body') || selector.includes('[slot="comment"]')) return oldDirectBodies(root);
+        if (selector === COMMENT_AUTHOR_SEL || selector.includes('a.author') || selector.includes('span.author')) return oldDirectAuthors(root);
+    }
+    return [...root.querySelectorAll(selector)].filter(n => isSameCommentScope(root, n));
+}
+function commentOwnText(root) {
+    if (isOldReddit() && root.matches?.('.thing.comment, .comment')) {
+        const entry = oldEntryRoot(root);
+        const clone = entry.cloneNode(true);
         clone.querySelectorAll("[data-ru-kind], [data-ru-comment], [data-ru-author-link]").forEach(n => n.remove());
         return (clone.innerText || clone.textContent || "").slice(0, 2500);
     }
-    function oldDirectChildCommentIds(el) {
-        if (!isOldReddit()) return [];
-        const child = el.querySelector?.(':scope > .child');
-        if (!child) return [];
-        return [...child.querySelectorAll('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]')]
-            .filter(n => n.parentElement?.closest?.('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]') === el || n.closest('.child') === child)
-            .map(n => oldThingId(n)).filter(Boolean);
+    const clone = root.cloneNode(true);
+    clone.querySelectorAll(COMMENT_ROOT_SEL).forEach(n => {
+        if (n !== clone) n.remove();
+    });
+    clone.querySelectorAll("[data-ru-kind], [data-ru-comment], [data-ru-author-link]").forEach(n => n.remove());
+    return (clone.innerText || clone.textContent || "").slice(0, 2500);
+}
+function oldDirectChildCommentIds(el) {
+    if (!isOldReddit()) return [];
+    const child = el.querySelector?.(':scope > .child');
+    if (!child) return [];
+    return [...child.querySelectorAll('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]')]
+        .filter(n => n.parentElement?.closest?.('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]') === el || n.closest('.child') === child)
+        .map(n => oldThingId(n)).filter(Boolean);
+}
+function oldVisibleCommentIds() {
+    return new Set([...document.querySelectorAll('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]')].map(n => oldThingId(n)).filter(Boolean));
+}
+function oldNoIdDeletedNodes() {
+    if (!isOldReddit()) return [];
+    return [...document.querySelectorAll('.thing.comment, .comment')].filter(el => !oldThingId(el) && commentParts(el).body);
+}
+function inferOldNoIdArchive(el, maps) {
+    const visible = oldVisibleCommentIds();
+    for (const childId of oldDirectChildCommentIds(el)) {
+        const child = maps.byId.get(normId(childId));
+        const parentId = normId(child?.parent_id || "");
+        if (parentId && !visible.has(parentId) && maps.byId.has(parentId)) return maps.byId.get(parentId);
     }
-    function oldVisibleCommentIds() {
-        return new Set([...document.querySelectorAll('.thing.comment[id^="thing_t1_"], .comment[id^="thing_t1_"]')].map(n => oldThingId(n)).filter(Boolean));
-    }
-    function oldNoIdDeletedNodes() {
-        if (!isOldReddit()) return [];
-        return [...document.querySelectorAll('.thing.comment, .comment')].filter(el => !oldThingId(el) && commentParts(el).body);
-    }
-    function inferOldNoIdArchive(el, maps) {
-        const visible = oldVisibleCommentIds();
-        for (const childId of oldDirectChildCommentIds(el)) {
-            const child = maps.byId.get(normId(childId));
-            const parentId = normId(child?.parent_id || "");
-            if (parentId && !visible.has(parentId) && maps.byId.has(parentId)) return maps.byId.get(parentId);
-        }
-        const domParent = oldDomParentCommentId(el);
-        if (domParent) {
-            const missing = (maps.children.get(normId(domParent)) || []).filter(c => {
-                const id = normId(c.id || c.name);
-                return id && !visible.has(id) && !document.querySelector(`[data-ru-comment="${id}"]`) && c.body && !looksRemoved(c.body);
-            });
-            if (missing.length === 1) return missing[0];
-        }
-        return null;
-    }
-    async function processOldNoIdComments() {
-        if (!isOldReddit()) return { commentAuthors: 0, commentBodies: 0, looked: 0 };
-        const nodes = oldNoIdDeletedNodes().filter(el => !el.querySelector('[data-ru-comment]'));
-        if (!nodes.length) return { commentAuthors: 0, commentBodies: 0, looked: 0 };
-        const arr = state.threadComments || await fetchThreadComments(currentPostId());
-        state.threadComments = arr;
-        const maps = threadMap(arr);
-        let commentAuthors = 0, commentBodies = 0, looked = 0;
-        nodes.forEach(el => {
-            const c = inferOldNoIdArchive(el, maps);
-            if (!c) return;
+    const domParent = oldDomParentCommentId(el);
+    if (domParent) {
+        const missing = (maps.children.get(normId(domParent)) || []).filter(c => {
             const id = normId(c.id || c.name);
-            if (!id || el.querySelector(`[data-ru-comment="${id}"]`)) return;
-            const r = restoreComment(el, c, { any: true, author: true, body: true });
-            commentAuthors += r.authors; commentBodies += r.bodies; looked++;
+            return id && !visible.has(id) && !document.querySelector(`[data-ru-comment="${id}"]`) && c.body && !looksRemoved(c.body);
         });
-        return { commentAuthors, commentBodies, looked };
+        if (missing.length === 1) return missing[0];
     }
+    return null;
+}
+async function processOldNoIdComments() {
+    if (!isOldReddit()) return { commentAuthors: 0, commentBodies: 0, looked: 0 };
+    const nodes = oldNoIdDeletedNodes().filter(el => !el.querySelector('[data-ru-comment]'));
+    if (!nodes.length) return { commentAuthors: 0, commentBodies: 0, looked: 0 };
+    const arr = state.threadComments || await fetchThreadComments(currentPostId());
+    state.threadComments = arr;
+    const maps = threadMap(arr);
+    let commentAuthors = 0, commentBodies = 0, looked = 0;
+    nodes.forEach(el => {
+        const c = inferOldNoIdArchive(el, maps);
+        if (!c) return;
+        const id = normId(c.id || c.name);
+        if (!id || el.querySelector(`[data-ru-comment="${id}"]`)) return;
+        const r = restoreComment(el, c, { any: true, author: true, body: true });
+        commentAuthors += r.authors; commentBodies += r.bodies; looked++;
+    });
+    return { commentAuthors, commentBodies, looked };
+}
 
-    function commentNodes() {
-        const roots = [];
-        document.querySelectorAll(COMMENT_ROOT_SEL).forEach(n => {
-            const r = closestCommentRoot(n);
-            if (r && commentId(r) && !roots.includes(r)) roots.push(r);
-        });
-        return roots;
-    }
-    function commentId(el) {
-        const oldId = oldThingId(el);
-        if (oldId) return oldId;
-        if (isOldReddit() && el.matches?.('.thing.comment, .comment')) return null;
-        for (const a of [ "thingid", "data-fullname", "fullname", "id", "data-id", "data-name" ]) {
-            const v = String(el.getAttribute?.(a) || "");
-            let m = v.match(/(?:thing_)?t1_([a-z0-9]{5,15})/i);
-            if (m) return m[1];
-            if ((a === "thingid" || a === "data-id") && /^([a-z0-9]{5,15})$/i.test(v)) return v;
-        }
-        const inner = el.querySelector?.('[thingid*="t1_"],[data-fullname*="t1_"],[id*="t1_"]');
-        return inner && inner !== el ? commentId(inner) : null;
-    }
-    function commentParts(el) {
-        const ownText = commentOwnText(el);
-        const bodyEls = directQuery(el, COMMENT_BODY_SEL);
-        const bodyText = bodyEls.length ? bodyEls.map(n => n.innerText || n.textContent || "").join("\n") : ownText;
-        const author = directQuery(el, COMMENT_AUTHOR_SEL).filter(a => !a.hasAttribute?.("data-ru-hidden-deleted-author")).some(a => isDeletedAuthor(a.textContent) || /\/user\/\[deleted\]/i.test(a.getAttribute?.("href") || "")) || /u\/\[deleted\]/i.test(ownText);
-        const oldRedditDeleted = !!(isOldReddit() && (el.classList?.contains('deleted') || (!bodyEls.length && /\[(?:deleted|removed)\]/i.test(ownText))));
-        const body = looksRemoved(bodyText) || /^\s*(?:comment (?:deleted|removed)|removed by moderator|removed by reddit)\s*$/im.test(bodyText) || oldRedditDeleted;
-        return {
-            any: author || body,
-            author: author,
-            body: body
-        };
-    }
-    function commentInsertTarget(el) {
-        if (isOldReddit() && el.matches?.('.thing.comment, .comment')) return oldEntryRoot(el);
-        return directQuery(el, '.usertext-body, [slot="comment"], [id$="-comment-rtjson-content"], [data-testid="comment-content"]').find(Boolean) || el;
-    }
-    function commentPermalink(c, id) {
-        if (c?.permalink) return `https://www.reddit.com${c.permalink}`;
-        const pid = currentPostId();
-        return pid ? `https://www.reddit.com/comments/${pid}/_/${id}/` : `https://www.reddit.com/comment/${id}/`;
-    }
-    function restoredCommentHeader(c, id, authorsChanged) {
-        const author = c?.author && !isDeletedAuthor(c.author) ? c.author : "";
-        const authorHTML = author ? `<a class="ru-enhanced-author" href="/user/${encodeURIComponent(author)}/" target="_self">u/${esc(author)}</a>` : "unknown author";
-        const link = esc(commentPermalink(c, id));
-        return `<div class="ru-enhanced-meta">↺ restored deleted comment · ${authorHTML} · <a href="${link}" target="_blank" rel="noopener noreferrer">t1_${esc(id)}</a></div>`;
-    }
-    function restoreComment(el, c, parts) {
-        const id = normId(c.id || c.name || commentId(el));
-        if (!archiveMatchesOldCommentPosition(el, c, id)) return {
-            authors: 0,
-            bodies: 0
-        };
-        let authors = 0, bodies = 0;
-        if (parts.author) authors += replaceAuthor(el, c.author);
-        if (parts.body && !el.querySelector(`[data-ru-comment="${id}"]`)) {
-            const body = htmlFrom(c, "body");
-            if (body) {
-                el.setAttribute?.("data-ru-restored-comment-id", id);
-                const marker = directQuery(el, '.usertext-body .md, [slot="comment"], [id$="-comment-rtjson-content"], .md').find(e => looksRemoved(e.textContent));
-                const html = `<div class="ru-enhanced-comment-body" data-ru-comment="${esc(id)}">${restoredCommentHeader(c, id, authors > 0)}${body}</div>`;
-                if (marker) marker.insertAdjacentHTML("afterend", html); else {
-                    const target = commentInsertTarget(el);
-                    if (isOldReddit() && el.matches?.('.thing.comment, .comment')) target.insertAdjacentHTML("beforeend", html); else if (target !== el && target.matches?.('[slot="comment"], [id$="-comment-rtjson-content"]')) target.insertAdjacentHTML("afterend", html); else target.insertAdjacentHTML("beforeend", html);
+async function processMissingComments() {
+    const pid = currentPostId();
+    if (!pid) return 0;
+    const arr = state.threadComments || await fetchThreadComments(pid);
+    state.threadComments = arr;
+    if (!arr || !arr.length) return 0;
+
+    let injected = 0;
+    const sorted = [...arr].sort((a, b) => (a.created_utc || 0) - (b.created_utc || 0));
+
+    for (const c of sorted) {
+        const id = normId(c.id || c.name);
+        if (!id || looksRemoved(c.body)) continue;
+
+        const exists = !!document.querySelector(`[thingid*="t1_${id}"], [data-fullname*="t1_${id}"], [id*="t1_${id}"], [data-ru-comment="${id}"]`);
+        if (exists) continue;
+
+        const parentId = normId(c.parent_id);
+        const isTopLevel = parentId === pid || !parentId || (c.parent_id || '').startsWith('t3_');
+        let container = null;
+
+        if (isOldReddit()) {
+            if (isTopLevel) {
+                const emptyNodes = [...document.querySelectorAll('.commentarea > .sitetable > .thing.comment')].filter(n => !oldThingId(n) && !n.querySelector('[data-ru-comment]') && commentParts(n).body);
+                if (emptyNodes.length > 0) {
+                    const el = emptyNodes[0];
+                    el.id = `thing_t1_${id}`;
+                    el.setAttribute('data-fullname', `t1_${id}`);
+                    const r = restoreComment(el, c, { any: true, author: true, body: true });
+                    if (r.bodies) injected++;
+                    continue;
                 }
-                attachMediaFailureHandlers(el);
-                bodies++;
+                container = document.querySelector('.commentarea > .sitetable.nestedlisting');
+            } else {
+                const parentEl = document.querySelector(`.thing.comment[id*="t1_${parentId}"], [data-ru-comment="${parentId}"]`)?.closest('.thing.comment, .ru-enhanced-injected-comment');
+                if (parentEl) {
+                    const emptyNodes = [...parentEl.querySelectorAll(':scope > .child > .sitetable > .thing.comment')].filter(n => !oldThingId(n) && !n.querySelector('[data-ru-comment]') && commentParts(n).body);
+                    if (emptyNodes.length > 0) {
+                        const el = emptyNodes[0];
+                        el.id = `thing_t1_${id}`;
+                        el.setAttribute('data-fullname', `t1_${id}`);
+                        const r = restoreComment(el, c, { any: true, author: true, body: true });
+                        if (r.bodies) injected++;
+                        continue;
+                    }
+
+                    let childDiv = parentEl.querySelector(':scope > .child');
+                    if (!childDiv) {
+                        childDiv = document.createElement('div');
+                        childDiv.className = 'child';
+                        const entry = parentEl.querySelector('.entry') || parentEl;
+                        if (entry.nextSibling) {
+                            parentEl.insertBefore(childDiv, entry.nextSibling);
+                        } else {
+                            parentEl.appendChild(childDiv);
+                        }
+                    }
+                    container = childDiv.querySelector(':scope > .sitetable');
+                    if (!container) {
+                        container = document.createElement('div');
+                        container.className = 'sitetable listing';
+                        childDiv.appendChild(container);
+                    }
+                }
+            }
+
+            if (container) {
+                const el = document.createElement('div');
+                el.className = `thing comment noncollapsed ru-enhanced-injected-comment`;
+                el.id = `thing_t1_${id}`;
+                el.setAttribute('data-fullname', `t1_${id}`);
+
+                const entry = document.createElement('div');
+                entry.className = 'entry unvoted';
+                const tagline = document.createElement('p');
+                tagline.className = 'tagline';
+                tagline.innerHTML = `<a href="javascript:void(0)" class="expand" onclick="return togglecomment(this)">[–]</a>`;
+                entry.appendChild(tagline);
+
+                el.appendChild(entry);
+                container.appendChild(el);
+
+                const r = restoreComment(el, c, { any: true, author: true, body: true });
+                if (r.bodies) injected++;
+            }
+        } else {
+            let parentEl = null;
+            if (isTopLevel) {
+                container = document.querySelector('#comment-tree, shreddit-comment-tree, .CommentTree, [data-testid="comment-tree"]');
+            } else {
+                parentEl = document.querySelector(`shreddit-comment[thingid*="t1_${parentId}"], .Comment[data-testid*="${parentId}"], [data-ru-comment="${parentId}"]`)?.closest('shreddit-comment, .Comment, .ru-enhanced-injected-comment');
+                if (parentEl) {
+                    container = parentEl.querySelector(':scope > [slot="children"]') || parentEl.querySelector(':scope > ul') || parentEl.querySelector('#comment-tree');
+                    if (!container && parentEl.tagName === 'SHREDDIT-COMMENT') {
+                        container = document.createElement('div');
+                        container.setAttribute('slot', 'children');
+                        parentEl.appendChild(container);
+                    } else if (!container) {
+                        container = parentEl;
+                    }
+                }
+            }
+
+            if (container) {
+                const el = document.createElement('div');
+                el.setAttribute('data-fullname', `t1_${id}`);
+                el.className = 'ru-enhanced-injected-comment';
+                if (!isTopLevel) {
+                    el.className += ' ru-child-comment';
+                }
+                container.appendChild(el);
+
+                const r = restoreComment(el, c, { any: true, author: true, body: true });
+                if (r.bodies) injected++;
             }
         }
-        if (bodies) state.doneComments.add(id);
-        return {
-            authors: authors,
-            bodies: bodies
-        };
     }
-    async function processComments() {
-        const candidates = commentNodes().map(el => ({
-            el: el,
-            id: commentId(el),
-            parts: commentParts(el)
-        })).filter(x => x.id && x.parts.any && (!state.doneComments.has(x.id) || !restoredCommentPresent(x.el, x.id)));
-        if (!candidates.length) return await processOldNoIdComments();
-        const map = await fetchCommentsByIds(candidates.map(x => x.id));
-        let commentAuthors = 0, commentBodies = 0;
-        candidates.forEach(x => {
-            const c = map.get(normId(x.id));
-            if (!c) return;
-            const r = restoreComment(x.el, c, x.parts);
-            commentAuthors += r.authors;
-            commentBodies += r.bodies;
-        });
-        const extra = await processOldNoIdComments();
-        commentAuthors += extra.commentAuthors;
-        commentBodies += extra.commentBodies;
-        return {
-            commentAuthors: commentAuthors,
-            commentBodies: commentBodies,
-            looked: candidates.length + extra.looked
-        };
+    return injected;
+}
+
+function commentNodes() {
+    const roots = [];
+    document.querySelectorAll(COMMENT_ROOT_SEL).forEach(n => {
+        const r = closestCommentRoot(n);
+        if (r && commentId(r) && !roots.includes(r)) roots.push(r);
+    });
+    return roots;
+}
+function commentId(el) {
+    const oldId = oldThingId(el);
+    if (oldId) return oldId;
+    if (isOldReddit() && el.matches?.('.thing.comment, .comment')) return null;
+    for (const a of ["thingid", "data-fullname", "fullname", "id", "data-id", "data-name"]) {
+        const v = String(el.getAttribute?.(a) || "");
+        let m = v.match(/(?:thing_)?t1_([a-z0-9]{5,15})/i);
+        if (m) return m[1];
+        if ((a === "thingid" || a === "data-id") && /^([a-z0-9]{5,15})$/i.test(v)) return v;
     }
-    async function run(force = false) {
-        const pid = currentPostId();
-        if (!pid || state.running) return;
-        const parts = postDeletedParts();
-        const cands = commentNodes().map(el => ({
-            el: el,
-            id: commentId(el),
-            parts: commentParts(el)
-        })).filter(x => x.id && x.parts.any && (!state.doneComments.has(x.id) || !restoredCommentPresent(x.el, x.id)));
-        const previousTotal = state.lastStats ? state.lastStats.postText + state.lastStats.postMedia + state.lastStats.authors + state.lastStats.commentAuthors + state.lastStats.commentBodies : 0;
-        const oldNoIdMayNeedCheck = isOldReddit() && oldNoIdDeletedNodes().length > 0;
-        if (!force && !parts.any && !cands.length && !oldNoIdMayNeedCheck) {
-            if (previousTotal) status("✓", `Visible scan: previously restored ${previousTotal} item(s). Expand/scroll for more; Shift-click rescans.`); else status("·", "Idle: no deleted post/comment text or author detected. Click to rescan.");
-            return;
+    const inner = el.querySelector?.('[thingid*="t1_"],[data-fullname*="t1_"],[id*="t1_"]');
+    return inner && inner !== el ? commentId(inner) : null;
+}
+function commentParts(el) {
+    const ownText = commentOwnText(el);
+    const bodyEls = directQuery(el, COMMENT_BODY_SEL);
+    const bodyText = bodyEls.length ? bodyEls.map(n => n.innerText || n.textContent || "").join("\n") : ownText;
+    const author = directQuery(el, COMMENT_AUTHOR_SEL).filter(a => !a.hasAttribute?.("data-ru-hidden-deleted-author")).some(a => isDeletedAuthor(a.textContent) || /\/user\/\[deleted\]/i.test(a.getAttribute?.("href") || "")) || /u\/\[deleted\]/i.test(ownText);
+    const oldRedditDeleted = !!(isOldReddit() && (el.classList?.contains('deleted') || (!bodyEls.length && /\[(?:deleted|removed)\]/i.test(ownText))));
+    const body = looksRemoved(bodyText) || /^\s*(?:comment (?:deleted|removed)|removed by moderator|removed by reddit)\s*$/im.test(bodyText) || oldRedditDeleted;
+    return {
+        any: author || body,
+        author: author,
+        body: body
+    };
+}
+function commentInsertTarget(el) {
+    if (isOldReddit() && el.matches?.('.thing.comment, .comment')) return oldEntryRoot(el);
+    return directQuery(el, '.usertext-body, [slot="comment"], [id$="-comment-rtjson-content"], [data-testid="comment-content"]').find(Boolean) || el;
+}
+function commentPermalink(c, id) {
+    if (c?.permalink) return `https://www.reddit.com${c.permalink}`;
+    const pid = currentPostId();
+    return pid ? `https://www.reddit.com/comments/${pid}/_/${id}/` : `https://www.reddit.com/comment/${id}/`;
+}
+function restoredCommentHeader(c, id, authorsChanged) {
+    const author = c?.author && !isDeletedAuthor(c.author) ? c.author : "";
+    const authorHTML = author ? `<a class="ru-enhanced-author" href="/user/${encodeURIComponent(author)}/" target="_self">u/${esc(author)}</a>` : "unknown author";
+    const link = esc(commentPermalink(c, id));
+    return `<div class="ru-enhanced-meta">↺ restored deleted comment · ${authorHTML} · <a href="${link}" target="_blank" rel="noopener noreferrer">t1_${esc(id)}</a></div>`;
+}
+function restoreComment(el, c, parts) {
+    const id = normId(c.id || c.name || commentId(el));
+    if (!archiveMatchesOldCommentPosition(el, c, id)) return {
+        authors: 0,
+        bodies: 0
+    };
+    let authors = 0, bodies = 0;
+    if (parts.author) authors += replaceAuthor(el, c.author);
+    if (parts.body && !el.querySelector(`[data-ru-comment="${id}"]`)) {
+        const body = htmlFrom(c, "body");
+        if (body) {
+            el.setAttribute?.("data-ru-restored-comment-id", id);
+            const marker = directQuery(el, '.usertext-body .md, [slot="comment"], [id$="-comment-rtjson-content"], .md').find(e => looksRemoved(e.textContent));
+            const target = marker ? null : commentInsertTarget(el);
+            const slotAttr = !isOldReddit() && el.tagName === 'SHREDDIT-COMMENT' && target === el ? 'slot="comment"' : '';
+            const html = `<div class="ru-enhanced-comment-body" data-ru-comment="${esc(id)}" ${slotAttr}>${restoredCommentHeader(c, id, authors > 0)}${body}</div>`;
+            if (marker) marker.insertAdjacentHTML("beforeend", html); else {
+                target.insertAdjacentHTML("beforeend", html);
+            }
+            attachMediaFailureHandlers(el);
+            bodies++;
         }
-        state.running = true;
-        disconnectObserver();
-        ensureStyle();
-        status("…", `In progress: checking archives for ${parts.any ? "post" : ""}${parts.any && cands.length ? " and " : ""}${cands.length ? cands.length + " comment(s)" : ""}.`);
-        const stats = {
-            postText: 0,
-            postMedia: 0,
-            authors: 0,
-            commentAuthors: 0,
-            commentBodies: 0,
-            failures: []
-        };
+    }
+    if (bodies) state.doneComments.add(id);
+    return {
+        authors: authors,
+        bodies: bodies
+    };
+}
+async function processComments() {
+    const candidates = commentNodes().map(el => ({
+        el: el,
+        id: commentId(el),
+        parts: commentParts(el)
+    })).filter(x => x.id && x.parts.any && (!state.doneComments.has(x.id) || !restoredCommentPresent(x.el, x.id)));
+    if (!candidates.length) return await processOldNoIdComments();
+    const map = await fetchCommentsByIds(candidates.map(x => x.id));
+    let commentAuthors = 0, commentBodies = 0;
+    candidates.forEach(x => {
+        const c = map.get(normId(x.id));
+        if (!c) return;
+        const r = restoreComment(x.el, c, x.parts);
+        commentAuthors += r.authors;
+        commentBodies += r.bodies;
+    });
+    const extra = await processOldNoIdComments();
+    commentAuthors += extra.commentAuthors;
+    commentBodies += extra.commentBodies;
+    return {
+        commentAuthors: commentAuthors,
+        commentBodies: commentBodies,
+        looked: candidates.length + extra.looked
+    };
+}
+async function run(force = false) {
+    const pid = currentPostId();
+    if (!pid || state.running) return;
+    if (force) {
+        state.threadComments = null;
         try {
-            try {
-                if (parts.any) {
-                    const post = await fetchPost(pid);
-                    if (post) Object.assign(stats, {
-                        ...stats,
-                        ...restorePost(post, parts)
-                    }); else if (parts.any) stats.failures.push("post not found in archives");
-                }
-            } catch (e) {
-                stats.failures.push(`post lookup failed: ${e.message || e}`);
+            localStorage.removeItem(cacheKey("thread", pid));
+        } catch (_e) {}
+    }
+    const parts = postDeletedParts();
+    const cands = commentNodes().map(el => ({
+        el: el,
+        id: commentId(el),
+        parts: commentParts(el)
+    })).filter(x => x.id && x.parts.any && (!state.doneComments.has(x.id) || !restoredCommentPresent(x.el, x.id)));
+    const previousTotal = state.lastStats ? state.lastStats.postText + state.lastStats.postMedia + state.lastStats.authors + state.lastStats.commentAuthors + state.lastStats.commentBodies : 0;
+    const oldNoIdMayNeedCheck = isOldReddit() && oldNoIdDeletedNodes().length > 0;
+    if (!force && !parts.any && !cands.length && !oldNoIdMayNeedCheck) {
+        if (previousTotal) status("✓", `Visible scan: previously restored ${previousTotal} item(s). Expand/scroll for more; Shift-click rescans.`); else status("·", "Idle: no deleted post/comment text or author detected. Click to rescan.");
+        return;
+    }
+    state.running = true;
+    disconnectObserver();
+    ensureStyle();
+    status("…", `In progress: checking archives for ${parts.any ? "post" : ""}${parts.any && cands.length ? " and " : ""}${cands.length ? cands.length + " comment(s)" : ""}.`);
+    const stats = {
+        postText: 0,
+        postMedia: 0,
+        authors: 0,
+        commentAuthors: 0,
+        commentBodies: 0,
+        failures: []
+    };
+    try {
+        try {
+            if (parts.any) {
+                const post = await fetchPost(pid);
+                if (post) Object.assign(stats, {
+                    ...stats,
+                    ...restorePost(post, parts)
+                }); else if (parts.any) stats.failures.push("post not found in archives");
             }
-            try {
-                const cr = await processComments();
-                stats.commentAuthors = cr.commentAuthors;
-                stats.commentBodies = cr.commentBodies;
-            } catch (e) {
-                stats.failures.push(`comment lookup failed: ${e.message || e}`);
-            }
-            const total = stats.postText + stats.postMedia + stats.authors + stats.commentAuthors + stats.commentBodies;
-            if (total || !previousTotal) state.lastStats = stats;
-            if (stats.failures.length && total) status("!", `Partial: restored ${total}; ${stats.failures.join("; ")}. Click toggles original/restored; Shift-click rescans.`); else if (stats.failures.length) status("×", `Failed: ${stats.failures.join("; ")}. Click rescans.`); else if (total) status("✓", `Visible scan: restored ${stats.postText} post text, ${stats.postMedia} media, ${stats.authors + stats.commentAuthors} username(s), ${stats.commentBodies} comment body/bodies. Expand/scroll for more; Shift-click rescans.`); else if (previousTotal) status("✓", `Visible scan: already restored ${previousTotal} item(s). Expand/scroll for more; Shift-click rescans.`); else status("Ø", "Done: deleted-looking content was detected, but no matching archived replacement was found or DOM replacement was not possible. Shift-click rescans.");
-        } finally {
-            state.running = false;
-            reconnectObserver();
+        } catch (e) {
+            stats.failures.push(`post lookup failed: ${e.message || e}`);
         }
-    }
-    function disconnectObserver() {
-        if (state.observer) state.observer.disconnect();
-    }
-    function reconnectObserver() {
-        if (state.observer) {
-            state.observer.observe(document.documentElement, {
-                childList: true,
-                subtree: true
-            });
+        try {
+            const cr = await processComments();
+            stats.commentAuthors = cr.commentAuthors;
+            stats.commentBodies = cr.commentBodies;
+
+            const missingCount = await processMissingComments();
+            stats.commentBodies += missingCount;
+        } catch (e) {
+            stats.failures.push(`comment lookup failed: ${e.message || e}`);
         }
+        const total = stats.postText + stats.postMedia + stats.authors + stats.commentAuthors + stats.commentBodies;
+        if (total || !previousTotal) state.lastStats = stats;
+        if (stats.failures.length && total) status("!", `Partial: restored ${total}; ${stats.failures.join("; ")}. Click toggles original/restored; Shift-click rescans.`); else if (stats.failures.length) status("×", `Failed: ${stats.failures.join("; ")}. Click rescans.`); else if (total) status("✓", `Visible scan: restored ${stats.postText} post text, ${stats.postMedia} media, ${stats.authors + stats.commentAuthors} username(s), ${stats.commentBodies} comment body/bodies. Expand/scroll for more; Shift-click rescans.`); else if (previousTotal) status("✓", `Visible scan: already restored ${previousTotal} item(s). Expand/scroll for more; Shift-click rescans.`); else status("Ø", "Done: deleted-looking content was detected, but no matching archived replacement was found or DOM replacement was not possible. Shift-click rescans.");
+    } finally {
+        state.running = false;
+        reconnectObserver();
     }
-    function watch() {
-        let t;
-        state.observer = new MutationObserver(() => {
-            clearTimeout(t);
-            t = setTimeout(() => {
-                const pid = currentPostId();
-                if (pid !== state.postId) {
-                    state.postId = pid;
-                    state.doneComments.clear();
-                    state.observerPasses = 0;
-                }
-                state.observerPasses++;
-                run(false).catch(e => {
-                    state.running = false;
-                    status("×", `Failed: ${e.message || e}`);
-                });
-            }, 1500);
-        });
+}
+function disconnectObserver() {
+    if (state.observer) state.observer.disconnect();
+}
+function reconnectObserver() {
+    if (state.observer) {
         state.observer.observe(document.documentElement, {
             childList: true,
             subtree: true
         });
-        window.addEventListener("popstate", () => setTimeout(() => {
-            state.postId = null;
-            run(true);
-        }, 700));
     }
-    if (/\/comments\/[a-z0-9]+/i.test(location.pathname)) {
-        ensureStyle();
-        status("…", "Starting: waiting for Reddit content.");
-        state.postId = currentPostId();
-        setTimeout(() => run(false), 700);
-        setTimeout(() => run(false), 2200);
-        watch();
-    }
-})();
+}
+function watch() {
+    let t;
+    state.observer = new MutationObserver(() => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+            const pid = currentPostId();
+            if (pid !== state.postId) {
+                state.postId = pid;
+                state.doneComments.clear();
+                state.observerPasses = 0;
+            }
+            state.observerPasses++;
+            run(false).catch(e => {
+                state.running = false;
+                status("×", `Failed: ${e.message || e}`);
+            });
+        }, 1500);
+    });
+    state.observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+    window.addEventListener("popstate", () => setTimeout(() => {
+        state.postId = null;
+        run(true);
+    }, 700));
+}
+if (/\/comments\/[a-z0-9]+/i.test(location.pathname)) {
+    ensureStyle();
+    status("…", "Starting: waiting for Reddit content.");
+    state.postId = currentPostId();
+    setTimeout(() => run(false), 700);
+    setTimeout(() => run(false), 2200);
+    watch();
+}
+}) ();
