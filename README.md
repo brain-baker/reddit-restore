@@ -41,8 +41,6 @@ Some media may be gone from the original host. In that case, the script will sho
 
 ## Screenshots
 
-## Screenshots
-
 ### New Reddit
 
 ![Reddit Restore on new Reddit](screenshots/new-reddit.png)
