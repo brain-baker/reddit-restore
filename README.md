@@ -1,6 +1,3 @@
-# reddit-restore
-Userscript to restore deleted Reddit posts, comments, usernames, and media using public archives.
-
 # Reddit Restore
 
 Reddit Restore is a userscript that restores deleted or removed Reddit posts, comments, usernames, images, videos, and media directly inside Reddit threads.
