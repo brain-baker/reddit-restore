@@ -22,7 +22,7 @@
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
 // ==/UserScript==
-(function RedditUncensoredEnhancedV3() {
+(function RedditRestoredV1() {
     "use strict";
     const CFG = {
         arctic: "https://arctic-shift.photon-reddit.com",
@@ -142,6 +142,7 @@
       #ru-enhanced-status{position:fixed!important;right:12px!important;bottom:12px!important;z-index:2147483647!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;border-radius:50%!important;border:3px solid #ff453a!important;background:#fff!important;color:#128a13!important;font:700 18px/26px Arial,sans-serif!important;box-shadow:0 2px 8px #0006!important;cursor:pointer!important;padding:0!important;margin:0!important;text-align:center!important;appearance:none!important;-webkit-appearance:none!important;box-sizing:border-box!important;overflow:hidden!important;display:flex!important;align-items:center!important;justify-content:center!important}
       .ru-enhanced-selftext,.ru-enhanced-media,.ru-enhanced-comment-body{display:block!important;clear:both!important;width:auto!important;max-width:min(860px,100%)!important;border-left:4px solid #ff453a;margin:8px 0!important;padding:10px!important;background:rgba(255,69,58,.08);border-radius:8px;box-sizing:border-box;white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;line-height:1.45!important;font-size:14px!important;font-weight:normal!important;font-style:normal!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important;color:var(--color-neutral-content-strong,var(--color-text-primary,inherit))!important}
       .ru-child-comment{margin-left:32px!important;padding-left:16px!important;border-left:2px solid var(--color-neutral-border-weak,var(--color-neutral-border,rgba(128,128,128,0.2)))!important;display:block!important}
+      .ru-enhanced-old-post-target{display:block!important}
       .ru-enhanced-comment-body .md,.ru-enhanced-comment-body p,.ru-enhanced-selftext .md,.ru-enhanced-selftext p{white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;display:block!important;width:auto!important;max-width:100%!important;font-size:14px!important;font-weight:normal!important;line-height:1.45!important}
       .ru-enhanced-comment-body img,.ru-enhanced-comment-body video,.ru-enhanced-media img,.ru-enhanced-media video{max-width:min(520px,100%)!important;max-height:500px!important;object-fit:contain!important;height:auto!important;border-radius:8px;display:block!important;margin:6px 0!important}
       .ru-enhanced-comment-body{position:relative!important}.ru-enhanced-comment-body a.ru-enhanced-author{color:#7dd3fc!important}
@@ -639,10 +640,10 @@ function postDeletedParts() {
         any: false
     };
     const txt = (p.innerText || p.textContent || "").slice(0, 5e3);
-    const authorEls = [...p.querySelectorAll('a.author, span.author, .tagline .author, .tagline [href^="/user/"], .tagline [href^="/u/"], a[href^="/user/"], a[href^="/u/"], [slot="authorName"], shreddit-post-author')];
+    const authorEls = [...p.querySelectorAll('a.author, span.author, em.author, .tagline .author, .tagline [href^="/user/"], .tagline [href^="/u/"], a[href^="/user/"], a[href^="/u/"], [slot="authorName"], shreddit-post-author')];
     const titleEls = [...p.querySelectorAll('a.title, h1, [slot="title"], [data-testid="post-title"]')];
     const bodyEls = [...p.querySelectorAll('.expando .usertext-body .md, .usertext-body .md, [slot="text-body"], [data-testid="post-content"], .md')];
-    let author = authorEls.filter(e => !e.hasAttribute?.("data-ru-hidden-deleted-author")).some(e => isDeletedAuthor(e.textContent) || /\/user\/\[deleted\]/i.test(e.getAttribute("href") || "")) || /Posted by\s+u\/\[deleted\]/i.test(txt);
+    let author = authorEls.filter(e => !e.hasAttribute?.("data-ru-hidden-deleted-author")).some(e => isDeletedAuthor(e.textContent) || /\/user\/\[deleted\]/i.test(e.getAttribute("href") || "")) || /Posted by\s+u\/\[deleted\]/i.test(txt) || /by\s+\[deleted\]/i.test(txt);
     if (!author && p?.tagName === 'SHREDDIT-POST' && isDeletedAuthor(p.getAttribute('author'))) author = true;
 
     const title = titleEls.some(e => looksRemoved(e.textContent));
@@ -785,7 +786,8 @@ function restorePost(p, parts) {
     const body = htmlFrom(p, "selftext");
     const mh = mediaHTML(p);
     if (!mh) root.querySelectorAll('[data-ru-kind="media"]').forEach(n => n.remove());
-    const shouldRestoreBody = body && !root.querySelector('[data-ru-kind="selftext"]') && (parts.body || !hasVisiblePostBody(root)) && !archivedBodyAlreadyVisible(root, p);
+    const isPostRemoved = parts.body || parts.title || parts.author || archiveSaysPostRemoved(p);
+    const shouldRestoreBody = body && !root.querySelector('[data-ru-kind="selftext"]') && (isPostRemoved || !hasVisiblePostBody(root)) && !archivedBodyAlreadyVisible(root, p);
     if (shouldRestoreBody) {
         const marker = [...root.querySelectorAll('.expando .usertext-body .md, .usertext-body .md, [slot="text-body"], [data-testid="post-content"], [id*="post-rtjson-content"], .md, p, div, shreddit-post-notice, faceplate-alert, [slot="post-notice"]')].find(e => looksRemoved(e.textContent));
         let targetSlot = "text-body";
@@ -810,7 +812,7 @@ function restorePost(p, parts) {
         }
         postText++;
     }
-    const shouldRestoreMedia = mh && !root.querySelector('[data-ru-kind="media"]') && !hasVisibleMedia(root) && (parts.media || archiveSaysPostRemoved(p));
+    const shouldRestoreMedia = mh && !root.querySelector('[data-ru-kind="media"]') && (isPostRemoved || !hasVisibleMedia(root));
     if (shouldRestoreMedia) {
         const marker = [...root.querySelectorAll('.expando .usertext-body .md, .usertext-body .md, [slot="text-body"], [data-testid="post-content"], [id*="post-rtjson-content"], .md, p, div, shreddit-post-notice, faceplate-alert, [slot="post-notice"]')].find(e => looksRemoved(e.textContent));
         let targetSlot = "text-body";
@@ -865,11 +867,7 @@ function oldDomParentCommentId(el) {
 function archiveMatchesOldCommentPosition(el, c, id) {
     if (!isOldReddit()) return true;
     const archiveId = normId(c?.id || c?.name || "");
-    if (archiveId && archiveId !== normId(id)) return false;
-    const domParent = oldDomParentCommentId(el);
-    if (!domParent) return true;
-    const archiveParent = normId(c?.parent_id || "");
-    return !archiveParent || archiveParent === normId(domParent);
+    return !archiveId || archiveId === normId(id);
 }
 
 function oldEntryRoot(el) {
