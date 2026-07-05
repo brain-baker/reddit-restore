@@ -1,5 +1,14 @@
 # Changelog
  
+## v1.8
+
+- Fixed missing/restored comment collapsing behavior on New Reddit by wrapping them in custom collapsible elements with a tagline, a collapse/expand toggle button `[-]` / `[+]`, and nested replies container.
+- Fixed collapsed comment visibility on Old Reddit by hiding only the restored comment body when collapsed, keeping the tagline and expander button visible and clickable.
+- Fixed New Reddit child comment visibility by binding event listeners to the native `<details>` element's `toggle` event in `<shreddit-comment>` shadow DOMs, ensuring children are instantly hidden/revealed on collapse/expand.
+- Fixed duplicate media previews inside posts and comments by using a `DOMParser`-based approach inside `addLinkMediaPreviews` to detect and filter out already-rendered media URLs.
+- Fixed width overflow issues on both Old and New Reddit by setting `max-width: 100% !important`, adding horizontal scroll wrapper capabilities (`overflow-x: auto`) for large tables, and enforcing wrapping using `word-break: break-word`.
+- Fixed child replies positioning on New Reddit by increasing the reply indentation (`margin-left: 44px`) to match native Reddit indentation aesthetics.
+
 ## v1.7
 
 - Fixed false positive post restoration by targeting specific post notice/alert elements for removal detection instead of evaluating the entire page/post text content.
