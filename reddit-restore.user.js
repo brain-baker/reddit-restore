@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Reddit Restore
 // @namespace   reddit-restore
-// @version     1.7
+// @version     1.8
 // @description Restores deleted Reddit posts, comments, usernames, images, videos, and media using Arctic Shift with PullPush fallback.
 // @author      brainbaker
 // @license     MIT
@@ -21,6 +21,8 @@
 // @connect     media.redgifs.com
 // @grant       GM_xmlhttpRequest
 // @run-at      document-end
+// @downloadURL https://update.greasyfork.org/scripts/585120/Reddit%20Restore.user.js
+// @updateURL https://update.greasyfork.org/scripts/585120/Reddit%20Restore.meta.js
 // ==/UserScript==
 (function RedditRestoredV1() {
     "use strict";
@@ -59,7 +61,7 @@
         return String(str ?? "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
     }
     function normId(id) {
-        return String(id || "").replace(/^t[13]_/, "").trim();
+        return String(id || "").replace(/^t[13]_/, "").trim().toLowerCase();
     }
     function looksRemoved(text) {
         return REMOVED_RE.test(String(text || "").trim());
@@ -140,14 +142,103 @@
         st.id = "ru-enhanced-style";
         st.textContent = `
       #ru-enhanced-status{position:fixed!important;right:12px!important;bottom:12px!important;z-index:2147483647!important;width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;border-radius:50%!important;border:3px solid #ff453a!important;background:#fff!important;color:#128a13!important;font:700 18px/26px Arial,sans-serif!important;box-shadow:0 2px 8px #0006!important;cursor:pointer!important;padding:0!important;margin:0!important;text-align:center!important;appearance:none!important;-webkit-appearance:none!important;box-sizing:border-box!important;overflow:hidden!important;display:flex!important;align-items:center!important;justify-content:center!important}
-      .ru-enhanced-selftext,.ru-enhanced-media,.ru-enhanced-comment-body{display:block!important;clear:both!important;width:auto!important;max-width:min(860px,100%)!important;border-left:4px solid #ff453a;margin:8px 0!important;padding:10px!important;background:rgba(255,69,58,.08);border-radius:8px;box-sizing:border-box;white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;line-height:1.45!important;font-size:14px!important;font-weight:normal!important;font-style:normal!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important;color:var(--color-neutral-content-strong,var(--color-text-primary,inherit))!important}       .ru-child-comment{margin-left:44px!important;position:relative!important;display:block!important}.ru-child-comment::before{content:""!important;position:absolute!important;left:-20px!important;top:-24px!important;bottom:0!important;width:2px!important;background-color:var(--color-neutral-border-weak,var(--color-neutral-border,rgba(128,128,128,0.2)))!important}
+      .ru-enhanced-selftext,.ru-enhanced-media,.ru-enhanced-comment-body{display:block!important;clear:both!important;width:fit-content!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;border-left:4px solid #ff453a;margin:8px 0!important;padding:10px!important;background:rgba(255,69,58,.08);border-radius:8px;box-sizing:border-box;white-space:normal!important;word-break:break-word!important;overflow-wrap:break-word!important;line-height:1.45!important;font-size:14px!important;font-weight:normal!important;font-style:normal!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif!important;color:var(--color-neutral-content-strong,var(--color-text-primary,inherit))!important}
       .ru-enhanced-old-post-target{display:block!important}
-      shreddit-comment[data-ru-collapsed="true"] .ru-enhanced-injected-comment,.Comment.is-collapsed .ru-enhanced-injected-comment,.ru-enhanced-injected-comment.collapsed{display:none!important}
-      .ru-enhanced-comment-body .md,.ru-enhanced-comment-body p,.ru-enhanced-selftext .md,.ru-enhanced-selftext p{white-space:normal!important;word-break:normal!important;overflow-wrap:break-word!important;display:block!important;width:auto!important;max-width:100%!important;font-size:14px!important;font-weight:normal!important;line-height:1.45!important}
-      .ru-enhanced-comment-body img,.ru-enhanced-comment-body video,.ru-enhanced-media img,.ru-enhanced-media video{max-width:min(520px,100%)!important;max-height:500px!important;object-fit:contain!important;height:auto!important;border-radius:8px;display:block!important;margin:6px 0!important}
+      shreddit-comment:has(> details:not([open])) .ru-enhanced-injected-comment,
+      shreddit-comment[collapsed] .ru-enhanced-injected-comment,
+      shreddit-comment[data-ru-collapsed="true"] .ru-enhanced-injected-comment,
+      .Comment.is-collapsed .ru-enhanced-injected-comment {
+          display: none !important;
+      }
+      .ru-enhanced-injected-comment.ru-hidden-by-parent {
+          display: none !important;
+      }
+      .ru-enhanced-injected-comment {
+          display: block !important;
+          margin-top: 8px !important;
+          margin-bottom: 8px !important;
+          padding: 4px 0 4px 8px !important;
+          border-left: 2px solid rgba(255, 69, 58, 0.4);
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+      }
+      .thing.comment.ru-enhanced-injected-comment {
+          border-left: none !important;
+      }
+      .ru-enhanced-injected-comment.ru-child-comment {
+          margin-left: 44px !important;
+          position: relative !important;
+          display: block !important;
+      }
+      .ru-injected-content {
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+      }
+      .ru-injected-header {
+          display: flex !important;
+          align-items: center !important;
+          gap: 6px !important;
+          font-size: 12px !important;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+          margin-bottom: 4px !important;
+      }
+      .ru-injected-toggle-btn {
+          background: none !important;
+          border: none !important;
+          color: var(--color-neutral-content-weak, #878a8c) !important;
+          cursor: pointer !important;
+          font-weight: bold !important;
+          padding: 0 4px !important;
+          font-family: monospace !important;
+          font-size: 14px !important;
+      }
+      .ru-injected-toggle-btn:hover {
+          color: #ff453a !important;
+      }
+      .ru-enhanced-injected-comment.ru-collapsed > .ru-injected-content,
+      .ru-enhanced-injected-comment.ru-collapsed > .ru-injected-replies {
+          display: none !important;
+      }
+      .thing.comment.collapsed .ru-enhanced-comment-body {
+          display: none !important;
+      }
+      .ru-enhanced-comment-body table, .ru-enhanced-selftext table {
+          display: block !important;
+          width: 100% !important;
+          overflow-x: auto !important;
+      }
+      .ru-enhanced-comment-body a, .ru-enhanced-selftext a {
+          word-break: break-all !important;
+          overflow-wrap: break-word !important;
+      }
+      .ru-enhanced-comment-body .md,.ru-enhanced-comment-body p,.ru-enhanced-selftext .md,.ru-enhanced-selftext p{white-space:normal!important;word-break:break-word!important;overflow-wrap:break-word!important;display:block!important;width:auto!important;max-width:100%!important;font-size:14px!important;font-weight:normal!important;line-height:1.45!important}
+      .ru-enhanced-comment-body img,.ru-enhanced-comment-body video,.ru-enhanced-media img,.ru-enhanced-media video{max-width:min(360px,100%)!important;max-height:300px!important;object-fit:contain!important;height:auto!important;border-radius:8px;display:block!important;margin:6px 0!important}
       .ru-enhanced-comment-body{position:relative!important}.ru-enhanced-comment-body a.ru-enhanced-author{color:#7dd3fc!important}
       .ru-enhanced-author{color:#24a0ed!important;text-decoration:none!important;font-weight:600}.ru-enhanced-author:hover{text-decoration:underline!important}
-      .ru-enhanced-selftext+.ru-enhanced-media,.ru-enhanced-media+.ru-enhanced-selftext{margin-top:6px!important}.ru-enhanced-media{min-width:0!important}`;
+      .ru-enhanced-selftext+.ru-enhanced-media,.ru-enhanced-media+.ru-enhanced-selftext{margin-top:6px!important}
+      .ru-enhanced-media{min-width:0!important}
+      .ru-enhanced-grid {
+          display: grid !important;
+          grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)) !important;
+          gap: 12px !important;
+          margin: 12px 0 !important;
+          max-width: 100% !important;
+      }
+      .ru-enhanced-grid figure {
+          margin: 0 !important;
+          padding: 0 !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          max-width: 100% !important;
+      }
+      .ru-enhanced-grid img, .ru-enhanced-grid video, .ru-enhanced-grid iframe {
+          max-width: 100% !important;
+          max-height: 400px !important;
+          height: auto !important;
+          object-fit: contain !important;
+          border-radius: 8px !important;
+      }`;
         document.head.appendChild(st);
     }
     function cacheKey(type, id) {
@@ -243,7 +334,7 @@
             } catch (e) {
                 log("arctic comments failed", e);
             }
-            const found = new Set(got.map(c => normId(c.id || c.name)));
+            const found = new Set(got.filter(c => c && c.body && !looksRemoved(c.body)).map(c => normId(c.id || c.name)));
             const missing = chunk.filter(x => !found.has(x));
             if (missing.length) {
                 const baseUrl = `${CFG.pullpush}/reddit/search/comment/?ids=`;
@@ -364,15 +455,24 @@
     function urlWithoutEscapedAmp(url) {
         return String(url || "").replace(/&amp;/g, "&");
     }
+    function resolveGiphyGifURL(url) {
+        const m = url.match(/giphy\.com\/gifs\/(?:[a-zA-Z0-9_-]+-)?([a-zA-Z0-9]{10,20})/i);
+        if (m) return `https://media.giphy.com/media/${m[1]}/giphy.gif`;
+        return url;
+    }
     function mediaTypeFromURL(url) {
         url = urlWithoutEscapedAmp(url);
         if (/\.(?:png|jpe?g|gif|webp|avif)(?:[?#].*)?$/i.test(url)) return "image";
         if (/\.(?:mp4|webm|mov)(?:[?#].*)?$/i.test(url)) return "video";
         if (/\/preview\.redd\.it\//i.test(url) || /\/i\.redd\.it\//i.test(url) || /format=(?:pjpg|jpg|png|webp)/i.test(url)) return "image";
         if (/\/v\.redd\.it\//i.test(url)) return "video-link";
+        if (/giphy\.com\/gifs\//i.test(url) || /giphy\.com\/media\//i.test(url)) return "image";
         return "";
     }
     function mediaPreviewHTML(url, label = "media preview") {
+        if (/giphy\.com\/gifs\//i.test(url)) {
+            url = resolveGiphyGifURL(url);
+        }
         const type = mediaTypeFromURL(url);
         url = esc(urlWithoutEscapedAmp(url));
         if (type === "image") return `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" alt="${esc(label)}" loading="lazy" referrerpolicy="no-referrer"></a>`;
@@ -381,25 +481,90 @@
         return "";
     }
     function addLinkMediaPreviews(html) {
-        const seen = new Set;
-        let previews = "";
-        String(html || "").replace(/<a\b[^>]*href=(['"])(.*?)\1[^>]*>/gi, (_m, _q, href) => {
-            const url = urlWithoutEscapedAmp(href);
-            if (!seen.has(url) && mediaTypeFromURL(url)) {
-                seen.add(url);
-                previews += mediaPreviewHTML(url, "comment media");
+        if (!html) return "";
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const seen = new Set();
+
+            // 1. Gather all URLs already rendered in media elements
+            doc.querySelectorAll('img, video, iframe, source').forEach(el => {
+                const src = el.getAttribute('src') || el.getAttribute('data-ru-giphy');
+                if (src) seen.add(urlWithoutEscapedAmp(src));
+            });
+
+            let previews = "";
+
+            // 2. Gather media URLs from links (<a> tags)
+            doc.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href');
+                if (href) {
+                    const url = urlWithoutEscapedAmp(href);
+                    if (!seen.has(url) && mediaTypeFromURL(url)) {
+                        seen.add(url);
+                        previews += mediaPreviewHTML(url, "comment media");
+                    }
+                }
+            });
+
+            // 3. Gather media URLs from text nodes (excluding text nodes inside <a> or media tags)
+            const walker = document.createTreeWalker(doc.body || doc, NodeFilter.SHOW_TEXT, {
+                acceptNode: node => {
+                    const parent = node.parentElement;
+                    if (!parent) return NodeFilter.FILTER_ACCEPT;
+                    const tag = parent.tagName.toLowerCase();
+                    if (['a', 'script', 'style', 'img', 'video', 'iframe'].includes(tag)) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+
+            let node;
+            const textUrls = [];
+            while ((node = walker.nextNode())) {
+                const text = node.nodeValue || "";
+                const matches = text.match(/https?:\/\/[^\s<>'"]+/gi);
+                if (matches) {
+                    matches.forEach(m => {
+                        const url = m.replace(/[),.;]+$/g, "");
+                        textUrls.push(url);
+                    });
+                }
             }
-            return _m;
-        });
-        String(html || "").replace(/https?:\/\/[^\s<>'"]+/gi, url => {
-            url = url.replace(/[),.;]+$/g, "");
-            if (!seen.has(url) && mediaTypeFromURL(url)) {
-                seen.add(url);
-                previews += mediaPreviewHTML(url, "comment media");
-            }
-            return url;
-        });
-        return previews ? `${html}<div class="ru-enhanced-comment-media">${previews}</div>` : html;
+
+            textUrls.forEach(url => {
+                const normUrl = urlWithoutEscapedAmp(url);
+                if (!seen.has(normUrl) && mediaTypeFromURL(normUrl)) {
+                    seen.add(normUrl);
+                    previews += mediaPreviewHTML(normUrl, "comment media");
+                }
+            });
+
+            const bodyHTML = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
+            return previews ? `${bodyHTML}<div class="ru-enhanced-comment-media">${previews}</div>` : bodyHTML;
+        } catch (e) {
+            log("addLinkMediaPreviews DOMParser failed, using fallback regex", e);
+            const seen = new Set;
+            let previews = "";
+            String(html || "").replace(/<a\b[^>]*href=(['"])(.*?)\1[^>]*>/gi, (_m, _q, href) => {
+                const url = urlWithoutEscapedAmp(href);
+                if (!seen.has(url) && mediaTypeFromURL(url)) {
+                    seen.add(url);
+                    previews += mediaPreviewHTML(url, "comment media");
+                }
+                return _m;
+            });
+            String(html || "").replace(/https?:\/\/[^\s<>'"]+/gi, url => {
+                url = url.replace(/[),.;]+$/g, "");
+                if (!seen.has(url) && mediaTypeFromURL(url)) {
+                    seen.add(url);
+                    previews += mediaPreviewHTML(url, "comment media");
+                }
+                return url;
+            });
+            return previews ? `${html}<div class="ru-enhanced-comment-media">${previews}</div>` : html;
+        }
     }
     function fixArchivedInlineMedia(html, fallbackText = "") {
         let out = String(html || "");
@@ -1048,7 +1213,7 @@
                     entry.className = 'entry unvoted';
                     const tagline = document.createElement('p');
                     tagline.className = 'tagline';
-                    tagline.innerHTML = `<a href="javascript:void(0)" class="expand" onclick="return togglecomment(this)">[–]</a>`;
+                    tagline.innerHTML = `<a href="javascript:void(0)" class="expand" onclick="return togglecomment(this)">[–]</a> <a href="/user/[deleted]" class="author">[deleted]</a> <span class="userattrs"></span> <a href="${esc(commentPermalink(c, id))}" class="ru-comment-id-link" style="font-size:10px; color:gray; margin-left:8px;" target="_blank" rel="noopener noreferrer">t1_${id}</a>`;
                     entry.appendChild(tagline);
 
                     el.appendChild(entry);
@@ -1064,7 +1229,7 @@
                 } else {
                     parentEl = document.querySelector(`shreddit-comment[thingid*="${parentId}"], shreddit-comment[id*="${parentId}"], shreddit-comment[data-fullname*="${parentId}"], .Comment[data-testid*="${parentId}"], [data-ru-comment="${parentId}"]`)?.closest('shreddit-comment, .Comment, .ru-enhanced-injected-comment');
                     if (parentEl) {
-                        container = parentEl.querySelector(':scope > [slot="children"]') || parentEl.querySelector(':scope > ul') || parentEl.querySelector('#comment-tree');
+                        container = parentEl.querySelector(':scope > [slot="children"]') || parentEl.querySelector(':scope > .ru-injected-replies') || parentEl.querySelector(':scope > ul') || parentEl.querySelector('#comment-tree');
                         if (!container && parentEl.tagName === 'SHREDDIT-COMMENT') {
                             container = document.createElement('div');
                             container.setAttribute('slot', 'children');
@@ -1082,6 +1247,57 @@
                     if (!isTopLevel) {
                         el.className += ' ru-child-comment';
                     }
+
+                    // Header/tagline for New Reddit custom comment wrapper
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'ru-injected-header';
+
+                    const toggleBtn = document.createElement('button');
+                    toggleBtn.className = 'ru-injected-toggle-btn';
+                    toggleBtn.type = 'button';
+                    toggleBtn.textContent = '[–]';
+                    toggleBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const isCollapsed = el.classList.contains('ru-collapsed');
+                        if (isCollapsed) {
+                            el.classList.remove('ru-collapsed');
+                            toggleBtn.textContent = '[–]';
+                        } else {
+                            el.classList.add('ru-collapsed');
+                            toggleBtn.textContent = '[+]';
+                        }
+                    });
+                    headerDiv.appendChild(toggleBtn);
+
+                    const authorA = document.createElement('a');
+                    authorA.className = 'ru-enhanced-author';
+                    authorA.href = `/user/[deleted]/`;
+                    authorA.textContent = `u/[deleted]`;
+                    headerDiv.appendChild(authorA);
+
+                    const idA = document.createElement('a');
+                    idA.className = 'ru-comment-id-link';
+                    idA.href = commentPermalink(c, id);
+                    idA.target = '_blank';
+                    idA.rel = 'noopener noreferrer';
+                    idA.style.fontSize = '12px';
+                    idA.style.color = 'var(--color-neutral-content-weak, gray)';
+                    idA.style.marginLeft = '8px';
+                    idA.textContent = `t1_${id}`;
+                    headerDiv.appendChild(idA);
+
+                    el.appendChild(headerDiv);
+
+                    // Content wrapper
+                    const contentWrapper = document.createElement('div');
+                    contentWrapper.className = 'ru-injected-content';
+                    el.appendChild(contentWrapper);
+
+                    // Replies container
+                    const repliesDiv = document.createElement('div');
+                    repliesDiv.className = 'ru-injected-replies';
+                    el.appendChild(repliesDiv);
+
                     container.appendChild(el);
 
                     const r = restoreComment(el, c, { any: true, author: true, body: true });
@@ -1128,6 +1344,9 @@
     }
     function commentInsertTarget(el) {
         if (isOldReddit() && el.matches?.('.thing.comment, .comment')) return oldEntryRoot(el);
+        if (el.classList?.contains('ru-enhanced-injected-comment')) {
+            return el.querySelector('.ru-injected-content') || el;
+        }
         return directQuery(el, '.usertext-body, [slot="comment"], [id$="-comment-rtjson-content"], [data-testid="comment-content"]').find(Boolean) || el;
     }
     function commentPermalink(c, id) {
@@ -1266,26 +1485,99 @@
         if (state.observer) {
             state.observer.observe(document.documentElement, {
                 childList: true,
-                subtree: true
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['collapsed']
             });
         }
     }
-    function updateCommentsCollapseStates() {
+    function bindDetailsToggleListeners() {
         if (isOldReddit()) return;
         document.querySelectorAll('shreddit-comment').forEach(comment => {
-            const details = comment.shadowRoot?.querySelector('details');
+            if (comment.getAttribute('data-ru-toggle-bound')) return;
+            comment.setAttribute('data-ru-toggle-bound', 'true');
+            comment.addEventListener('click', () => {
+                setTimeout(() => {
+                    updateCommentsCollapseStates();
+                }, 0);
+            });
+            const details = comment.querySelector('details') || comment.shadowRoot?.querySelector('details');
             if (details) {
-                if (!details.open) {
-                    comment.setAttribute('data-ru-collapsed', 'true');
-                } else {
-                    comment.removeAttribute('data-ru-collapsed');
+                details.addEventListener('toggle', () => {
+                    updateCommentsCollapseStates();
+                });
+            }
+        });
+    }
+    function isAncestorCollapsed(el) {
+        let parent = el.parentElement;
+        while (parent) {
+            if (parent.tagName === 'SHREDDIT-COMMENT') {
+                const details = parent.querySelector('details') || parent.shadowRoot?.querySelector('details');
+                const isDetailsClosed = details && !details.open;
+                if (parent.collapsed === true || parent.hasAttribute('collapsed') || parent.getAttribute('collapsed') === 'true' || parent.getAttribute('data-ru-collapsed') === 'true' || isDetailsClosed) {
+                    return true;
+                }
+            }
+            if (parent.classList) {
+                if (parent.classList.contains('is-collapsed') ||
+                    parent.classList.contains('collapsed') ||
+                    parent.classList.contains('ru-collapsed') ||
+                    parent.classList.contains('ru-hidden-by-parent') ||
+                    [...parent.classList].some(c => c.toLowerCase().includes('collapsed'))) {
+                    return true;
+                }
+            }
+            if (typeof parent.getAttribute === 'function') {
+                if (parent.getAttribute('collapsed') === 'true' ||
+                    parent.getAttribute('data-ru-collapsed') === 'true' ||
+                    parent.getAttribute('data-collapsed') === 'true') {
+                    return true;
+                }
+            }
+            parent = parent.parentElement;
+        }
+        return false;
+    }
+    function updateInjectedCommentsVisibility() {
+        if (isOldReddit()) return;
+        document.querySelectorAll('.ru-enhanced-injected-comment').forEach(el => {
+            const isCollapsed = isAncestorCollapsed(el);
+            if (isCollapsed) {
+                if (!el.classList.contains('ru-hidden-by-parent')) {
+                    el.classList.add('ru-hidden-by-parent');
+                }
+            } else {
+                if (el.classList.contains('ru-hidden-by-parent')) {
+                    el.classList.remove('ru-hidden-by-parent');
                 }
             }
         });
     }
+    function updateCommentsCollapseStates() {
+        if (isOldReddit()) return;
+        bindDetailsToggleListeners();
+        document.querySelectorAll('shreddit-comment').forEach(comment => {
+            const isCollapsed = comment.collapsed === true || comment.hasAttribute('collapsed') || comment.getAttribute('collapsed') === 'true';
+            const details = comment.querySelector('details') || comment.shadowRoot?.querySelector('details');
+            const isDetailsClosed = details && !details.open;
+            if (isCollapsed || isDetailsClosed) {
+                if (comment.getAttribute('data-ru-collapsed') !== 'true') {
+                    comment.setAttribute('data-ru-collapsed', 'true');
+                }
+            } else {
+                if (comment.hasAttribute('data-ru-collapsed')) {
+                    comment.removeAttribute('data-ru-collapsed');
+                }
+            }
+        });
+        updateInjectedCommentsVisibility();
+    }
     function watch() {
         let t;
         state.observer = new MutationObserver(() => {
+            bindDetailsToggleListeners();
+            updateCommentsCollapseStates();
             clearTimeout(t);
             t = setTimeout(() => {
                 const pid = currentPostId();
@@ -1303,7 +1595,9 @@
         });
         state.observer.observe(document.documentElement, {
             childList: true,
-            subtree: true
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['collapsed']
         });
         window.addEventListener("popstate", () => setTimeout(() => {
             state.postId = null;
@@ -1318,7 +1612,11 @@
         setTimeout(() => run(false), 2200);
         watch();
         window.addEventListener('click', () => {
-            setTimeout(updateCommentsCollapseStates, 100);
+            bindDetailsToggleListeners();
+            setTimeout(() => {
+                updateCommentsCollapseStates();
+                updateInjectedCommentsVisibility();
+            }, 100);
         });
     }
 })();
